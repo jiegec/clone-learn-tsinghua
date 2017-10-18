@@ -12,15 +12,22 @@ const user = {
 
 const rootDir = '/Volumes/Data/learn.tsinghua'
 
+const blacklist = fs.readFileSync('blacklist').toString().split('\n')
 const learn_helper = new thulib.LearnHelperUtil(user);
+let current = 0;
+let all = 0;
 learn_helper.login().then(() => {
     learn_helper.getCourseList().then((courses) => {
         courses.forEach((course) => {
             console.log(course.courseName);
             learn_helper.getDocuments(course).then((documents) => {
+                all += documents.length;
                 documents.forEach((document) => {
-                    if(document.title == 'Dev-C++' || document.title == 'Dev-C++(64bit)')
+                    if (blacklist.find(title => title == document.title)) {
+                        console.log('Blacklisted: ' + document.title);
+                        current++;
                         return;
+                    }
 
                     let fileName = rootDir + '/' + course.courseName + '/' + document.title;
                     fs.mkdir(rootDir + '/' + course.courseName, err => {})
@@ -31,7 +38,6 @@ learn_helper.login().then(() => {
                     }).pipe(fs.createWriteStream(fileName));
 
                     stream.on('finish',() => {
-                        console.log(course.courseName + '/' + document.title + ' Done');
                         const buffer = readChunk.sync(fileName,0,4100);
                         let result = fileType(buffer);
                         let ext = "txt";
@@ -41,6 +47,8 @@ learn_helper.login().then(() => {
                             ext = result.ext;
                         }
                         fs.renameSync(fileName,fileName+'.'+ext);
+                        current++;
+                        console.log(current + ' / ' + all + ': ' + course.courseName + '/' + document.title + ' Done');
                     });
                 });
             });
