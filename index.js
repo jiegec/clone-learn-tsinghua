@@ -17,6 +17,8 @@ const req = request.defaults({
     headers: {'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3251.0 Mobile Safari/537.36'}
 })
 
+let current = 0;
+let all = 0;
 function callback(course, documents, cookies) {
     documents = _.uniqBy(documents,'title');
     all += documents.length;
@@ -31,6 +33,7 @@ function callback(course, documents, cookies) {
     
         if (Date.now() - new Date(document.updatingTime).getTime() > 1000*60*60*24*7) {
             console.log('Skipped: ' + document.title);
+            current++;
             return;
         }
     
@@ -67,8 +70,6 @@ function callback(course, documents, cookies) {
 // const blacklist = fs.readFileSync('blacklist').toString().split('\n')
 const learn_helper = new thulib.LearnHelperUtil(user);
 const cic_learn_helper = new thulib.CicLearnHelperUtil(process.argv[2], process.argv[3]);
-let current = 0;
-let all = 0;
 (async () => {
     await learn_helper.login();
     await cic_learn_helper.login();
