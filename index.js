@@ -14,13 +14,16 @@ const user = {
 const rootDir = '/Volumes/Data/learn.tsinghua'
 
 const req = request.defaults({
-    headers: {'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3251.0 Mobile Safari/537.36'}
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3251.0 Mobile Safari/537.36'
+    }
 })
 
 let current = 0;
 let all = 0;
+
 function callback(course, documents, cookies) {
-    documents = _.uniqBy(documents,'title');
+    documents = _.uniqBy(documents, 'title');
     all += documents.length;
     documents.forEach((document) => {
         /*
@@ -30,37 +33,46 @@ function callback(course, documents, cookies) {
             return;
         }
         */
-    
-        if (Date.now() - new Date(document.updatingTime).getTime() > 1000*60*60*24*7) {
+
+        if (Date.now() - new Date(document.updatingTime).getTime() < 1000 * 60 * 60 * 24 * 10) {
             console.log('Skipped: ' + document.title);
             current++;
             return;
         }
-    
-        let fileName = rootDir + '/' + course.courseName + '/' + document.title;
+
+        let year = course.courseName.slice(course.courseName.lastIndexOf('(') + 1, course.courseName.lastIndexOf('(') + 10);
+        let semester = course.courseName.slice(course.courseName.lastIndexOf('(') + 10, -1);
+        let name = course.courseName.slice(0, course.courseName.lastIndexOf('('));
+
+        let fileName = `${rootDir}/${year}/${semester}/${name}/${document.title}`;
         try {
-            fs.mkdirSync(rootDir + '/' + course.courseName);
-        } catch (e) {
-        }
-    
+            fs.mkdirSync(`${rootDir}/${year}`);
+        } catch (e) {}
+        try {
+            fs.mkdirSync(`${rootDir}/${year}/${semester}`);
+        } catch (e) {}
+        try {
+            fs.mkdirSync(`${rootDir}/${year}/${semester}/${name}`);
+        } catch (e) {}
+
         let fileStream = fs.createWriteStream(fileName);
         let stream = req({
             method: 'GET',
             uri: document.url,
             jar: cookies
         }).pipe(fileStream);
-        fileStream.on('finish',() => {
-            const buffer = readChunk.sync(fileName,0,4100);
+        fileStream.on('finish', () => {
+            const buffer = readChunk.sync(fileName, 0, 4100);
             let result = fileType(buffer);
             let ext = "txt";
-            if(result !== null) {
-                if(result.ext === 'msi') {
+            if (result !== null) {
+                if (result.ext === 'msi') {
                     // BUG in file-type package
                     result.ext = 'ppt';
                 }
                 ext = result.ext;
             }
-            fs.renameSync(fileName,fileName+'.'+ext);
+            fs.renameSync(fileName, fileName + '.' + ext);
             current++;
             console.log(current + ' / ' + all + ': ' + course.courseName + '/' + document.title + ' Done');
         });
@@ -69,22 +81,36 @@ function callback(course, documents, cookies) {
 
 // const blacklist = fs.readFileSync('blacklist').toString().split('\n')
 const learn_helper = new thulib.LearnHelperUtil(user);
-const cic_learn_helper = new thulib.CicLearnHelperUtil(process.argv[2], process.argv[3]);
+const cic_learn_helper = new thulib.CicLearnHelperUtil(user);
+const learn2018_helper = new thulib.Learn2018HelperUtil(user);
 (async () => {
     await learn_helper.login();
     await cic_learn_helper.login();
-    let courses = await learn_helper.getCourseList();
-    courses.forEach((course) => {
-        learn_helper.getDocuments(course).then((documents) => {
-            if (documents.length > 0) {
-                callback(course, documents, learn_helper.cookies);
-            } else  {
+    await learn2018_helper.login();
+    (await learn_helper.getCourseList()).forEach((course) => {
+        try {
+            if (course.site == 'learn2001') {
+                learn_helper.getDocuments(course).then((documents) => {
+                    callback(course, documents, learn_helper.cookies);
+                });
+            } else if (course.site == 'learn2015') {
                 cic_learn_helper.getDocuments(course.courseID).then((documents) => {
                     callback(course, documents, cic_learn_helper.cookies);
                 });
+            } else if (course.site == 'learn2018') {
+                // handled below
             }
-        });
+        } catch (err) {
+            console.log('got err: %s', err);
+        }
+    });
+    (await learn2018_helper.getCourseList()).forEach((course) => {
+        try {
+            learn2018_helper.getDocuments(course).then((documents) => {
+                callback(course, documents, learn2018_helper.cookies);
+            });
+        } catch (err) {
+            console.log('got err: %s', err);
+        }
     });
 })();
-
-
