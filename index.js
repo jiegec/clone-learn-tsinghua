@@ -34,7 +34,7 @@ function callback(course, documents, cookies) {
         }
         */
 
-        if (Date.now() - new Date(document.updatingTime).getTime() < 1000 * 60 * 60 * 24 * 10) {
+        if (Date.now() - new Date(document.updatingTime).getTime() > 1000 * 60 * 60 * 24 * 3) {
             console.log('Skipped: ' + document.title);
             current++;
             return;
@@ -91,6 +91,20 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         try {
             if (course.site == 'learn2001') {
                 learn_helper.getDocuments(course).then((documents) => {
+                    callback(course, documents, learn_helper.cookies);
+                });
+                learn_helper.getAssignments(course).then((assignments) => {
+                    documents = assignments.filter((assignment) => assignment.fileURL).map((assignment) => {
+                        let title = assignment.filename;
+                        if (title.indexOf('.') !== -1) {
+                            title = title.split('.').slice(0, -1).join('.');
+                        }
+                        return {
+                            title,
+                            url: assignment.fileURL,
+                            updatingTime: assignment.startDate
+                        }
+                    });
                     callback(course, documents, learn_helper.cookies);
                 });
             } else if (course.site == 'learn2015') {
