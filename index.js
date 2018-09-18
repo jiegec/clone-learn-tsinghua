@@ -145,7 +145,8 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
           for (let notice of notices) {
             console.log(notice.title);
             let fileName =
-                `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+                `${getAndEnsureSaveFileDir(course)}/${notice.title.replace(/\//gi, '_')}.txt`;
+            fileName = fileName.replace(/&/gi, '_');
             let fileStream = fs.createWriteStream(fileName);
             fileStream.write(notice.content);
           }
