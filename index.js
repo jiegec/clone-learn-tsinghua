@@ -48,6 +48,12 @@ function getAndEnsureSaveFileDir(course) {
 function callback(course, documents, cookies) {
   documents = _.uniqBy(documents, 'title');
   all += documents.length;
+  if (documents.length > 50) {
+    console.log('Too many files skipped: ' + course.courseName);
+    current += documents.length;
+    return;
+  }
+
   documents.forEach(document => {
     /*
     if (blacklist.find(title => title == document.title)) {
@@ -59,12 +65,29 @@ function callback(course, documents, cookies) {
 
     if (Date.now() - new Date(document.updatingTime).getTime() >
         1000 * 60 * 60 * 24 * 3) {
-      console.log('Skipped: ' + document.title);
+      console.log('Too old skipped: ' + document.title);
+      current++;
+      return;
+    }
+
+    if (document.size > 1024 * 1024 * 100) {
+      console.log('Too large skipped: ' + document.title);
       current++;
       return;
     }
 
     let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title}`;
+
+    let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
+                    .filter(fn => fn.startsWith(document.title));
+    for (let file of files) {
+      const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
+      if (document.size == stats.size) {
+        console.log('Already downloaded skipped: ' + document.title);
+        current++;
+        return;
+      }
+    }
 
     let fileStream = fs.createWriteStream(fileName);
     let stream =
