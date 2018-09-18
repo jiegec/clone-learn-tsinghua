@@ -166,6 +166,15 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
       learn2018_helper.getDocuments(course).then(documents => {
         callback(course, documents, learn2018_helper.cookies);
       });
+      learn2018_helper.getNotices(course).then(notices => {
+        for (let notice of notices) {
+          console.log(notice.title);
+          let fileName =
+              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+          let fileStream = fs.createWriteStream(fileName);
+          fileStream.write(notice.content);
+        }
+      });
     } catch (err) {
       console.log('got err: %s', err);
     }
