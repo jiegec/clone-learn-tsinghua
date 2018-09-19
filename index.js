@@ -48,7 +48,7 @@ function getAndEnsureSaveFileDir(course) {
 function callback(course, documents, cookies) {
   documents = _.uniqBy(documents, 'title');
   all += documents.length;
-  if (documents.length > 50) {
+  if (documents.length > 70) {
     console.log('Too many files skipped: ' + course.courseName);
     current += documents.length;
     return;
@@ -86,6 +86,8 @@ function callback(course, documents, cookies) {
         console.log('Already downloaded skipped: ' + document.title);
         current++;
         return;
+      } else {
+        console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
       }
     }
 
@@ -143,7 +145,6 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         });
         learn_helper.getNotices(course).then(notices => {
           for (let notice of notices) {
-            console.log(notice.title);
             let fileName =
                 `${getAndEnsureSaveFileDir(course)}/${notice.title.replace(/\//gi, '_')}.txt`;
             fileName = fileName.replace(/&/gi, '_');
@@ -169,7 +170,6 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
       });
       learn2018_helper.getNotices(course).then(notices => {
         for (let notice of notices) {
-          console.log(notice.title);
           let fileName =
               `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
           let fileStream = fs.createWriteStream(fileName);
