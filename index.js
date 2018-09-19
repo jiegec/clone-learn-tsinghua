@@ -90,7 +90,13 @@ function callback(course, documents, cookies) {
       return;
     }
 
-    if (document.size > 1024 * 1024 * 100) {
+    if (isNaN(document.size)) {
+      if (document.size[document.size.length-1] === 'G' || (document.size[document.size.length-1] === 'M' && Number(document.size.substring(0,document.size.length-1)) > 100)) {
+        console.log('Too large skipped: ' + document.title);
+        current++;
+        return;
+      }
+    } else if (document.size > 1024 * 1024 * 100) {
       console.log('Too large skipped: ' + document.title);
       current++;
       return;
@@ -175,6 +181,15 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
       } else if (course.site == 'learn2015') {
         cic_learn_helper.getDocuments(course.courseID).then(documents => {
           callback(course, documents, cic_learn_helper.cookies);
+        });
+        cic_learn_helper.getNotices(course).then(notices => {
+          for (let notice of notices) {
+            console.log(notice.title);
+            let fileName =
+                `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+            let fileStream = fs.createWriteStream(fileName);
+            fileStream.write(notice.content);
+          }
         });
       } else if (course.site == 'learn2018') {
         // handled below
