@@ -25,9 +25,8 @@ let all = 0;
 
 function bytesToSize(bytes) {
   if (bytes === 0) return '0B';
-  var k = 1024,
-    sizes = ['B', 'K', 'M', 'G'],
-    i = Math.floor(Math.log(bytes) / Math.log(k));
+  var k = 1024, sizes = ['B', 'K', 'M', 'G'],
+      i = Math.floor(Math.log(bytes) / Math.log(k));
   if (i == 1) {
     return (bytes / Math.pow(k, i)).toFixed(1) + sizes[i];
   } else {
@@ -91,7 +90,10 @@ function callback(course, documents, cookies) {
     }
 
     if (isNaN(document.size)) {
-      if (document.size[document.size.length-1] === 'G' || (document.size[document.size.length-1] === 'M' && Number(document.size.substring(0,document.size.length-1)) > 100)) {
+      if (document.size[document.size.length - 1] === 'G' ||
+          (document.size[document.size.length - 1] === 'M' &&
+           Number(document.size.substring(0, document.size.length - 1)) >
+               100)) {
         console.log('Too large skipped: ' + document.title);
         current++;
         return;
@@ -112,7 +114,8 @@ function callback(course, documents, cookies) {
         console.log('Already downloaded skipped: ' + document.title);
         current++;
         return;
-      } else {
+      }
+      else {
         console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
       }
     }
@@ -148,71 +151,69 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
   await learn_helper.login();
   await cic_learn_helper.login();
   await learn2018_helper.login();
-  (await learn_helper.getCourseList()).forEach(course => {
+  let courses01 = await learn_helper.getCourseList();
+  for (let course of courses01) {
     try {
       if (course.site == 'learn2001') {
-        learn_helper.getDocuments(course).then(documents => {
-          callback(course, documents, learn_helper.cookies);
-        });
-        learn_helper.getAssignments(course).then(assignments => {
-          documents = assignments.filter(assignment => assignment.fileURL)
-                          .map(assignment => {
-                            let title = assignment.filename;
-                            if (title.indexOf('.') !== -1) {
-                              title = title.split('.').slice(0, -1).join('.');
-                            }
-                            return {
-                              title,
-                              url: assignment.fileURL,
-                              updatingTime: assignment.startDate
-                            };
-                          });
-          callback(course, documents, learn_helper.cookies);
-        });
-        learn_helper.getNotices(course).then(notices => {
-          for (let notice of notices) {
-            let fileName =
-                `${getAndEnsureSaveFileDir(course)}/${notice.title.replace(/\//gi, '_')}.txt`;
-            fileName = fileName.replace(/&/gi, '_');
-            let fileStream = fs.createWriteStream(fileName);
-            fileStream.write(notice.content);
-          }
-        });
+        let documents = await learn_helper.getDocuments(course);
+        callback(course, documents, learn_helper.cookies);
+
+        let assignments = await learn_helper.getAssignments(course);
+        documents = assignments.filter(assignment => assignment.fileURL)
+                        .map(assignment => {
+                          let title = assignment.filename;
+                          if (title.indexOf('.') !== -1) {
+                            title = title.split('.').slice(0, -1).join('.');
+                          }
+                          return {
+                            title,
+                            url: assignment.fileURL,
+                            updatingTime: assignment.startDate
+                          };
+                        });
+        callback(course, documents, learn_helper.cookies);
+
+        let notices = await learn_helper.getNotices(course);
+        for (let notice of notices) {
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${
+              notice.title.replace(/\//gi, '_')}.txt`;
+          fileName = fileName.replace(/&/gi, '_');
+          let fileStream = fs.createWriteStream(fileName);
+          fileStream.write(notice.content);
+        }
       } else if (course.site == 'learn2015') {
-        cic_learn_helper.getDocuments(course.courseID).then(documents => {
-          callback(course, documents, cic_learn_helper.cookies);
-        });
-        cic_learn_helper.getNotices(course).then(notices => {
-          for (let notice of notices) {
-            console.log(notice.title);
-            let fileName =
-                `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
-            let fileStream = fs.createWriteStream(fileName);
-            fileStream.write(notice.content);
-          }
-        });
+        let documents = await cic_learn_helper.getDocuments(course.courseID);
+        callback(course, documents, cic_learn_helper.cookies);
+
+        let notices = await cic_learn_helper.getNotices(course);
+        for (let notice of notices) {
+          console.log(notice.title);
+          let fileName =
+              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+          let fileStream = fs.createWriteStream(fileName);
+          fileStream.write(notice.content);
+        }
       } else if (course.site == 'learn2018') {
         // handled below
       }
     } catch (err) {
       console.log('got err: %s', err);
     }
-  });
-  (await learn2018_helper.getCourseList()).forEach(course => {
+  }
+  let courses18 = await learn2018_helper.getCourseList();
+  for (let course of courses18) {
     try {
-      learn2018_helper.getDocuments(course).then(documents => {
-        callback(course, documents, learn2018_helper.cookies);
-      });
-      learn2018_helper.getNotices(course).then(notices => {
-        for (let notice of notices) {
-          let fileName =
-              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
-          let fileStream = fs.createWriteStream(fileName);
-          fileStream.write(notice.content);
-        }
-      });
+      let documents = await learn2018_helper.getDocuments(course);
+      callback(course, documents, learn2018_helper.cookies);
+
+      let notices = await learn2018_helper.getNotices(course);
+      for (let notice of notices) {
+        let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+        let fileStream = fs.createWriteStream(fileName);
+        fileStream.write(notice.content);
+      }
     } catch (err) {
       console.log('got err: %s', err);
     }
-  });
+  }
 })();
