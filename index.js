@@ -23,6 +23,26 @@ const req = request.defaults({
 let current = 0;
 let all = 0;
 
+function bytesToSize(bytes) {
+  if (bytes === 0) return '0B';
+  var k = 1024,
+    sizes = ['B', 'K', 'M', 'G'],
+    i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (i == 1) {
+    return (bytes / Math.pow(k, i)).toFixed(1) + sizes[i];
+  } else {
+    return (bytes / Math.pow(k, i)).toFixed(2) + sizes[i];
+  }
+}
+
+function isSameSize(document_size, stats_size) {
+  if (typeof document_size == 'string') {
+    return (document_size == bytesToSize(stats_size));
+  } else {
+    return (document_size == stats_size);
+  }
+}
+
 function getAndEnsureSaveFileDir(course) {
   let year = course.courseName.slice(
       course.courseName.lastIndexOf('(') + 1,
@@ -82,7 +102,7 @@ function callback(course, documents, cookies) {
                     .filter(fn => fn.startsWith(document.title));
     for (let file of files) {
       const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
-      if (document.size == stats.size) {
+      if (isSameSize(document.size, stats.size)) {
         console.log('Already downloaded skipped: ' + document.title);
         current++;
         return;
