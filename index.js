@@ -5,6 +5,7 @@ const readChunk = require('read-chunk');
 const fileType = require('file-type');
 const process = require('process');
 const _ = require('lodash');
+const CFB = require('cfb');
 
 const user = {
   username: process.argv[2],
@@ -130,7 +131,13 @@ function callback(course, documents, cookies) {
       if (result !== null) {
         if (result.ext === 'msi') {
           // BUG in file-type package
-          result.ext = 'ppt';
+          let cfb = CFB.read(fileName, {type: 'file'});
+          if (CFB.find(cfb, 'WordDocument') !== null)
+            result.ext = 'doc';
+          else if (CFB.find(cfb, 'Workbook') !== null)
+            result.ext = 'xls';
+          else if (CFB.find(cfb, 'PowerPoint Document') !== null)
+            result.ext = 'ppt';
         }
         ext = result.ext;
       }
