@@ -5,6 +5,7 @@ const readChunk = require('read-chunk');
 const fileType = require('file-type');
 const process = require('process');
 const _ = require('lodash');
+const CFB = require('cfb');
 
 const user = {
   username: process.argv[2],
@@ -104,10 +105,10 @@ function callback(course, documents, cookies) {
       return;
     }
 
-    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title}`;
+    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title.replace(/\//gi, '_')}`;
 
     let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
-                    .filter(fn => fn.startsWith(document.title));
+                    .filter(fn => fn.startsWith(document.title.replace(/\//gi, '_')));
     for (let file of files) {
       const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
       if (isSameSize(document.size, stats.size)) {
@@ -130,7 +131,13 @@ function callback(course, documents, cookies) {
       if (result !== null) {
         if (result.ext === 'msi') {
           // BUG in file-type package
-          result.ext = 'ppt';
+          let cfb = CFB.read(fileName, {type: 'file'});
+          if (CFB.find(cfb, 'WordDocument') !== null)
+            result.ext = 'doc';
+          else if (CFB.find(cfb, 'Workbook') !== null)
+            result.ext = 'xls';
+          else if (CFB.find(cfb, 'PowerPoint Document') !== null)
+            result.ext = 'ppt';
         }
         ext = result.ext;
       }
@@ -185,11 +192,11 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         let documents = await cic_learn_helper.getDocuments(course.courseID);
         callback(course, documents, cic_learn_helper.cookies);
 
-        let notices = await cic_learn_helper.getNotices(course);
+        let notices = await cic_learn_helper.getNotices(course.courseID);
         for (let notice of notices) {
-          console.log(notice.title);
-          let fileName =
-              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${
+              notice.title.replace(/\//gi, '_')}.txt`;
+          fileName = fileName.replace(/&/gi, '_');
           let fileStream = fs.createWriteStream(fileName);
           fileStream.write(notice.content);
         }
