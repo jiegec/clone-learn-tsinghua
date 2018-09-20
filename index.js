@@ -104,10 +104,10 @@ function callback(course, documents, cookies) {
       return;
     }
 
-    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title}`;
+    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title.replace(/\//gi, '_')}`;
 
     let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
-                    .filter(fn => fn.startsWith(document.title));
+                    .filter(fn => fn.startsWith(document.title.replace(/\//gi, '_')));
     for (let file of files) {
       const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
       if (isSameSize(document.size, stats.size)) {
@@ -185,11 +185,11 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         let documents = await cic_learn_helper.getDocuments(course.courseID);
         callback(course, documents, cic_learn_helper.cookies);
 
-        let notices = await cic_learn_helper.getNotices(course);
+        let notices = await cic_learn_helper.getNotices(course.courseID);
         for (let notice of notices) {
-          console.log(notice.title);
-          let fileName =
-              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${
+              notice.title.replace(/\//gi, '_')}.txt`;
+          fileName = fileName.replace(/&/gi, '_');
           let fileStream = fs.createWriteStream(fileName);
           fileStream.write(notice.content);
         }
