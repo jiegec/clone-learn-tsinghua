@@ -29,6 +29,10 @@ function bytesToSize(bytes) {
   var k = 1024, sizes = ['B', 'K', 'M', 'G'],
       i = Math.floor(Math.log(bytes) / Math.log(k)),
       tmp = String((bytes / Math.pow(k, i)).toFixed(2));
+  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) {
+    i = 2,
+    tmp = String((bytes / Math.pow(k, i)).toFixed(2));
+  }
   if (i == 1 || tmp[tmp.length-1] === '0') {
     return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
   } else {
