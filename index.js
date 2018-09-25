@@ -27,13 +27,11 @@ let all = 0;
 function bytesToSize(bytes) {
   if (bytes === 0) return '0B';
   var k = 1024, sizes = ['B', 'K', 'M', 'G'],
-      i = Math.floor(Math.log(bytes) / Math.log(k)),
-      tmp = String((bytes / Math.pow(k, i)).toFixed(2));
-  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) {
-    i = 2,
-    tmp = String((bytes / Math.pow(k, i)).toFixed(2));
-  }
-  if (i == 1 || tmp[tmp.length-1] === '0') {
+      i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
+    i = 2;
+  var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
+  if (i == 1 || tmp[tmp.length-1] === '0') { // case of 'K' or remove the last 0
     return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
   } else {
     return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
