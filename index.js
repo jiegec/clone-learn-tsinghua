@@ -28,16 +28,23 @@ function bytesToSize(bytes) {
   if (bytes === 0) return '0B';
   var k = 1024, sizes = ['B', 'K', 'M', 'G'],
       i = Math.floor(Math.log(bytes) / Math.log(k));
-  if (i == 1) {
-    return (bytes / Math.pow(k, i)).toFixed(1) + sizes[i];
+  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
+    i = 2;
+  var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
+  if (i == 1 || tmp[tmp.length-1] === '0') { // case of 'K' or remove the last 0
+    return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
   } else {
-    return (bytes / Math.pow(k, i)).toFixed(2) + sizes[i];
+    return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
   }
 }
 
 function isSameSize(document_size, stats_size) {
   if (typeof document_size == 'string') {
-    return (document_size == bytesToSize(stats_size));
+    if (document_size[document_size.length - 1] === 'B') {
+      return (document_size.substring(0, document_size.length - 1) == stats_size);
+    } else {
+      return (document_size == bytesToSize(stats_size));
+    }
   } else {
     return (document_size == stats_size);
   }
@@ -93,8 +100,9 @@ function callback(course, documents, cookies) {
     if (isNaN(document.size)) {
       if (document.size[document.size.length - 1] === 'G' ||
           (document.size[document.size.length - 1] === 'M' &&
-           Number(document.size.substring(0, document.size.length - 1)) >
-               100)) {
+           Number(document.size.substring(0, document.size.length - 1)) > 100) ||
+          (document.size[document.size.length - 1] === 'B' &&
+           Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
         console.log('Too large skipped: ' + document.title);
         current++;
         return;
