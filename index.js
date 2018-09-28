@@ -83,7 +83,7 @@ function callback(course, documents, cookies) {
     */
 
     if (Date.now() - new Date(document.updatingTime).getTime() >
-        1000 * 60 * 60 * 24 * 3) {
+        1000 * 60 * 60 * 24 * 5) {
       console.log('Too old skipped: ' + document.title);
       current++;
       return;
