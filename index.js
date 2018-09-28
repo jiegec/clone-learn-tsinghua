@@ -97,22 +97,6 @@ function callback(course, documents, cookies) {
       return;
     }
 
-    if (isNaN(document.size)) {
-      if (document.size[document.size.length - 1] === 'G' ||
-          (document.size[document.size.length - 1] === 'M' &&
-           Number(document.size.substring(0, document.size.length - 1)) > 100) ||
-          (document.size[document.size.length - 1] === 'B' &&
-           Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
-        console.log('Too large skipped: ' + document.title);
-        current++;
-        return;
-      }
-    } else if (document.size > 1024 * 1024 * 100) {
-      console.log('Too large skipped: ' + document.title);
-      current++;
-      return;
-    }
-
     let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title.replace(/\//gi, '_')}`;
 
     let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
@@ -127,6 +111,22 @@ function callback(course, documents, cookies) {
       else {
         console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
       }
+    }
+
+    if (isNaN(document.size)) {
+      if (document.size[document.size.length - 1] === 'G' ||
+          (document.size[document.size.length - 1] === 'M' &&
+           Number(document.size.substring(0, document.size.length - 1)) > 100) ||
+          (document.size[document.size.length - 1] === 'B' &&
+           Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
+        console.log('Too large skipped: ' + document.title);
+        current++;
+        return;
+      }
+    } else if (document.size > 1024 * 1024 * 100) {
+      console.log('Too large skipped: ' + document.title);
+      current++;
+      return;
     }
 
     let fileStream = fs.createWriteStream(fileName);
