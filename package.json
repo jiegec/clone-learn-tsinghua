@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cfb": "^1.1.0",
     "file-type": "^7.7.1",
     "lodash": "^4.17.11",
     "read-chunk": "^2.1.0",

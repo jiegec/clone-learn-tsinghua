@@ -5,6 +5,7 @@ const readChunk = require('read-chunk');
 const fileType = require('file-type');
 const process = require('process');
 const _ = require('lodash');
+const CFB = require('cfb');
 
 const user = {
   username: process.argv[2],
@@ -27,16 +28,23 @@ function bytesToSize(bytes) {
   if (bytes === 0) return '0B';
   var k = 1024, sizes = ['B', 'K', 'M', 'G'],
       i = Math.floor(Math.log(bytes) / Math.log(k));
-  if (i == 1) {
-    return (bytes / Math.pow(k, i)).toFixed(1) + sizes[i];
+  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
+    i = 2;
+  var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
+  if (i == 1 || tmp[tmp.length-1] === '0') { // case of 'K' or remove the last 0
+    return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
   } else {
-    return (bytes / Math.pow(k, i)).toFixed(2) + sizes[i];
+    return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
   }
 }
 
 function isSameSize(document_size, stats_size) {
   if (typeof document_size == 'string') {
-    return (document_size == bytesToSize(stats_size));
+    if (document_size[document_size.length - 1] === 'B') {
+      return (document_size.substring(0, document_size.length - 1) == stats_size);
+    } else {
+      return (document_size == bytesToSize(stats_size));
+    }
   } else {
     return (document_size == stats_size);
   }
@@ -92,8 +100,9 @@ function callback(course, documents, cookies) {
     if (isNaN(document.size)) {
       if (document.size[document.size.length - 1] === 'G' ||
           (document.size[document.size.length - 1] === 'M' &&
-           Number(document.size.substring(0, document.size.length - 1)) >
-               100)) {
+           Number(document.size.substring(0, document.size.length - 1)) > 100) ||
+          (document.size[document.size.length - 1] === 'B' &&
+           Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
         console.log('Too large skipped: ' + document.title);
         current++;
         return;
@@ -104,10 +113,10 @@ function callback(course, documents, cookies) {
       return;
     }
 
-    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title}`;
+    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title.replace(/\//gi, '_')}`;
 
     let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
-                    .filter(fn => fn.startsWith(document.title));
+                    .filter(fn => fn.startsWith(document.title.replace(/\//gi, '_')));
     for (let file of files) {
       const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
       if (isSameSize(document.size, stats.size)) {
@@ -130,7 +139,13 @@ function callback(course, documents, cookies) {
       if (result !== null) {
         if (result.ext === 'msi') {
           // BUG in file-type package
-          result.ext = 'ppt';
+          let cfb = CFB.read(fileName, {type: 'file'});
+          if (CFB.find(cfb, 'WordDocument') !== null)
+            result.ext = 'doc';
+          else if (CFB.find(cfb, 'Workbook') !== null)
+            result.ext = 'xls';
+          else if (CFB.find(cfb, 'PowerPoint Document') !== null)
+            result.ext = 'ppt';
         }
         ext = result.ext;
       }
@@ -185,11 +200,11 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         let documents = await cic_learn_helper.getDocuments(course.courseID);
         callback(course, documents, cic_learn_helper.cookies);
 
-        let notices = await cic_learn_helper.getNotices(course);
+        let notices = await cic_learn_helper.getNotices(course.courseID);
         for (let notice of notices) {
-          console.log(notice.title);
-          let fileName =
-              `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${
+              notice.title.replace(/\//gi, '_')}.txt`;
+          fileName = fileName.replace(/&/gi, '_');
           let fileStream = fs.createWriteStream(fileName);
           fileStream.write(notice.content);
         }
