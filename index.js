@@ -12,7 +12,7 @@ const user = {
   getPassword: () => process.argv[3]
 };
 
-const rootDir = '/Volumes/Data/learn.tsinghua';
+const rootDir = '/Volumes/Data/jiegec/learn.tsinghua';
 
 const req = request.defaults({
   headers: {
@@ -226,6 +226,18 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
         let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
         let fileStream = fs.createWriteStream(fileName);
         fileStream.write(notice.content);
+        if (notice.attachmentName && notice.attachmentUrl) {
+          all++;
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.attachmentName}`;
+          let fileStream = fs.createWriteStream(fileName);
+          req({method: 'GET', uri: notice.attachmentUrl, jar: learn2018_helper.cookies}).pipe(fileStream);
+            fileStream.on('finish', () => {
+              current ++;
+              console.log(
+                  current + ' / ' + all + ': ' + course.courseName + '/' +
+                  notice.attachmentName + ' Done');
+            });
+        }
       }
     } catch (err) {
       console.log('got err: %s', err);
