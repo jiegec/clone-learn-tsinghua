@@ -203,6 +203,13 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
                           };
                         });
         callback(course, documents, learn_helper.cookies);
+        for (let assignment of assignments) {
+          let fileName = `${getAndEnsureSaveFileDir(course)}/${
+              assignment.title.replace(/\//gi, '_')}.txt`;
+          fileName = fileName.replace(/&/gi, '_');
+          let fileStream = fs.createWriteStream(fileName);
+          fileStream.write('说明：' + assignment.detail + '\n分数：' + assignment.grade + '\n评语：' + assignment.comment);
+        }
 
         let notices = await learn_helper.getNotices(course);
         for (let notice of notices) {
