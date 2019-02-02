@@ -91,7 +91,7 @@ function callback(course, documents, cookies) {
     */
 
     if (Date.now() - new Date(document.updatingTime).getTime() >
-        1000 * 60 * 60 * 24 * 12) {
+        1000 * 60 * 60 * 24 * 30) {
       console.log('Too old skipped: ' + document.title);
       current++;
       return;
@@ -159,85 +159,9 @@ function callback(course, documents, cookies) {
 }
 
 // const blacklist = fs.readFileSync('blacklist').toString().split('\n')
-const learn_helper = new thulib.LearnHelperUtil(user);
-const cic_learn_helper = new thulib.CicLearnHelperUtil(user);
 const learn2018_helper = new thulib.Learn2018HelperUtil(user);
 (async () => {
-  await learn_helper.login();
-  await cic_learn_helper.login();
   await learn2018_helper.login();
-  let courses01 = await learn_helper.getCourseList();
-  for (let course of courses01) {
-    try {
-      if (course.site == 'learn2001') {
-        let documents = await learn_helper.getDocuments(course);
-        callback(course, documents, learn_helper.cookies);
-
-        let assignments = await learn_helper.getAssignments(course);
-        documents = assignments.filter(assignment => assignment.fileURL)
-                        .map(assignment => {
-                          let title = assignment.filename;
-                          if (title.indexOf('.') !== -1) {
-                            title = title.split('.').slice(0, -1).join('.');
-                          }
-                          return {
-                            title,
-                            url: assignment.fileURL,
-                            updatingTime: assignment.startDate,
-                            size: -1,
-                          };
-                        });
-        callback(course, documents, learn_helper.cookies);
-        documents = assignments.filter(assignment => assignment.uploadFileURL)
-                        .map(assignment => {
-                          let title = assignment.uploadFilename;
-                          if (title.indexOf('.') !== -1) {
-                            title = title.split('.').slice(0, -1).join('.');
-                          }
-                          title = assignment.title + '-' + title;
-                          return {
-                            title,
-                            url: assignment.uploadFileURL,
-                            updatingTime: assignment.startDate,
-                            size: -1,
-                          };
-                        });
-        callback(course, documents, learn_helper.cookies);
-        for (let assignment of assignments) {
-          let fileName = `${getAndEnsureSaveFileDir(course)}/${
-              assignment.title.replace(/\//gi, '_')}.txt`;
-          fileName = fileName.replace(/&/gi, '_');
-          let fileStream = fs.createWriteStream(fileName);
-          fileStream.write('说明：' + assignment.detail + '\n分数：' + assignment.grade + '\n评语：' + assignment.comment);
-        }
-
-        let notices = await learn_helper.getNotices(course);
-        for (let notice of notices) {
-          let fileName = `${getAndEnsureSaveFileDir(course)}/${
-              notice.title.replace(/\//gi, '_')}.txt`;
-          fileName = fileName.replace(/&/gi, '_');
-          let fileStream = fs.createWriteStream(fileName);
-          fileStream.write(notice.content);
-        }
-      } else if (course.site == 'learn2015') {
-        let documents = await cic_learn_helper.getDocuments(course.courseID);
-        callback(course, documents, cic_learn_helper.cookies);
-
-        let notices = await cic_learn_helper.getNotices(course.courseID);
-        for (let notice of notices) {
-          let fileName = `${getAndEnsureSaveFileDir(course)}/${
-              notice.title.replace(/\//gi, '_')}.txt`;
-          fileName = fileName.replace(/&/gi, '_');
-          let fileStream = fs.createWriteStream(fileName);
-          fileStream.write(notice.content);
-        }
-      } else if (course.site == 'learn2018') {
-        // handled below
-      }
-    } catch (err) {
-      console.log('got err: %s', err);
-    }
-  }
   let courses18 = await learn2018_helper.getCourseList();
   for (let course of courses18) {
     try {
@@ -246,7 +170,7 @@ const learn2018_helper = new thulib.Learn2018HelperUtil(user);
 
       let notices = await learn2018_helper.getNotices(course);
       for (let notice of notices) {
-        let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.title}.txt`;
+        let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.title.replace(/\//gi, '_')}.txt`;
         let fileStream = fs.createWriteStream(fileName);
         fileStream.write(notice.content);
         if (notice.attachmentName && notice.attachmentUrl) {
