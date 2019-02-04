@@ -4,6 +4,8 @@ const _ = require('lodash');
 const thuLearnLib = require('thu-learn-lib');
 const crossFetch = require('cross-fetch');
 const realIsomorphicFetch = require('real-isomorphic-fetch');
+const textVersionJs = require('textversionjs');
+const htmlEntities = require('html-entities').AllHtmlEntities;
 
 const rootDir = '/Volumes/Data/jiegec/learn.tsinghua';
 
@@ -74,7 +76,7 @@ async function callback(semester, course, documents, cookies) {
             return;
         }
 
-        let title = document.title.replace(/\//gi, '_');
+        let title = document.title.replace(/\//gi, '_').trim();
 
         let dir = getAndEnsureSaveFileDir(semester, course);
 
@@ -87,8 +89,8 @@ async function callback(semester, course, documents, cookies) {
                 console.log(`${current}/${all}: Already downloaded skipped: ${document.title}`);
                 return;
             } else {
-                console.log(document);
                 console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
+                return;
             }
         } catch (e) {
 
@@ -127,6 +129,43 @@ async function callback(semester, course, documents, cookies) {
         const files = await helper.getFileList(course.id);
         await callback(semester, course, files, {});
         const notifications = await helper.getNotificationList(course.id);
-        //console.log(notifications);
+        all += notifications.length;
+        let dir = getAndEnsureSaveFileDir(semester, course);
+        for (let notification of notifications) {
+            let title = notification.title.replace(/\//gi, '_').trim();
+            let file = `${dir}/${title}.txt`;
+            fs.writeFileSync(file, textVersionJs(notification.content));
+            current ++;
+            console.log(`${current}/${all}: ${course.name}/${notification.title}.txt Saving`);
+        }
+        const homeworks = await helper.getHomeworkList(course.id);
+        all += homeworks.length;
+        for (let homework of homeworks) {
+            let title = htmlEntities.decode(homework.title).trim();
+            let file = `${dir}/${title}.txt`;
+            let content = '';
+            if (homework.description !== undefined) {
+                content += `说明： ${textVersionJs(homework.description)}\n`;
+            }
+            if (homework.grade !== undefined) {
+                content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+            }
+            if (homework.gradeContent !== undefined) {
+                content += `评语： ${homework.gradeContent}\n`;
+            }
+            fs.writeFileSync(file, content);
+            current ++;
+            console.log(`${current}/${all}: ${course.name}/${title}.txt Saving`);
+            if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
+                all ++;
+                let fileName = `${dir}/${title}-${homework.submittedAttachmentName}`;
+                let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                let result = await fetch(homework.submittedAttachmentUrl);
+                let fileStream = fs.createWriteStream(fileName);
+                result.body.pipe(fileStream);
+                current++;
+                console.log(`${current}/${all}: ${course.name}/${title}-${homework.submittedAttachmentName} Downloading`);
+            }
+        }
     }
 })();
