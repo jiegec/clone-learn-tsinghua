@@ -1,193 +1,132 @@
-const thulib = require('thulib');
-const request = require('request');
 const fs = require('fs');
-const readChunk = require('read-chunk');
-const fileType = require('file-type');
 const process = require('process');
 const _ = require('lodash');
-const CFB = require('cfb');
-
-const user = {
-  username: process.argv[2],
-  getPassword: () => process.argv[3]
-};
+const thuLearnLib = require('thu-learn-lib');
+const crossFetch = require('cross-fetch');
+const realIsomorphicFetch = require('real-isomorphic-fetch');
 
 const rootDir = '/Volumes/Data/jiegec/learn.tsinghua';
 
-const req = request.defaults({
-  headers: {
-    'User-Agent':
-        'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3251.0 Mobile Safari/537.36'
-  }
-});
+let helper = new thuLearnLib.Learn2018Helper();
 
 let current = 0;
 let all = 0;
 
 function bytesToSize(bytes) {
-  if (bytes === 0) return '0B';
-  var k = 1024, sizes = ['B', 'K', 'M', 'G'],
-      i = Math.floor(Math.log(bytes) / Math.log(k));
-  if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
-    i = 2;
-  var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
-  if (i == 1 || tmp[tmp.length-1] === '0') { // case of 'K' or remove the last 0
-    return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
-  } else {
-    return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
-  }
+    if (bytes === 0) return '0B';
+    var k = 1024, sizes = ['B', 'K', 'M', 'G'],
+        i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
+        i = 2;
+    var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
+    if (i == 1 || tmp[tmp.length - 1] === '0') { // case of 'K' or remove the last 0
+        return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+    } else {
+        return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
+    }
 }
 
 function isSameSize(document_size, stats_size) {
-  if (typeof document_size == 'string') {
-    if (document_size[document_size.length - 1] === 'B') {
-      return (document_size.substring(0, document_size.length - 1) == stats_size);
+    if (typeof document_size == 'string') {
+        if (document_size[document_size.length - 1] === 'B') {
+            return (document_size.substring(0, document_size.length - 1) == stats_size);
+        } else {
+            return (document_size == bytesToSize(stats_size));
+        }
     } else {
-      return (document_size == bytesToSize(stats_size));
+        return (document_size == stats_size);
     }
-  } else {
-    return (document_size == stats_size);
-  }
 }
 
-function getAndEnsureSaveFileDir(course) {
-  let year = course.courseName.slice(
-      course.courseName.lastIndexOf('(') + 1,
-      course.courseName.lastIndexOf('(') + 10);
-  let semester =
-      course.courseName.slice(course.courseName.lastIndexOf('(') + 10, -1);
-  let name = course.courseName.slice(0, course.courseName.lastIndexOf('('));
-  try {
-    fs.mkdirSync(`${rootDir}/${year}`);
-  } catch (e) {
-  }
-  try {
-    fs.mkdirSync(`${rootDir}/${year}/${semester}`);
-  } catch (e) {
-  }
-  try {
-    fs.mkdirSync(`${rootDir}/${year}/${semester}/${name}`);
-  } catch (e) {
-  }
-  return `${rootDir}/${year}/${semester}/${name}`;
-}
-
-function callback(course, documents, cookies) {
-  documents = _.uniqBy(documents, 'title');
-  all += documents.length;
-  if (documents.length > 70) {
-    console.log('Too many files skipped: ' + course.courseName);
-    current += documents.length;
-    return;
-  }
-
-  documents.forEach(document => {
-    /*
-    if (blacklist.find(title => title == document.title)) {
-        console.log('Blacklisted: ' + document.title);
-        current++;
-        return;
-    }
-    */
-
-    if (Date.now() - new Date(document.updatingTime).getTime() >
-        1000 * 60 * 60 * 24 * 30) {
-      console.log('Too old skipped: ' + document.title);
-      current++;
-      return;
-    }
-
-    let fileName = `${getAndEnsureSaveFileDir(course)}/${document.title.replace(/\//gi, '_')}`;
-
-    let files = fs.readdirSync(getAndEnsureSaveFileDir(course))
-                    .filter(fn => fn.startsWith(document.title.replace(/\//gi, '_')));
-    for (let file of files) {
-      const stats = fs.statSync(`${getAndEnsureSaveFileDir(course)}/${file}`)
-      if (isSameSize(document.size, stats.size)) {
-        console.log('Already downloaded skipped: ' + document.title);
-        current++;
-        return;
-      }
-      else {
-        console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
-      }
-    }
-
-    if (isNaN(document.size) && typeof document.size === 'string') {
-      if (document.size[document.size.length - 1] === 'G' ||
-          (document.size[document.size.length - 1] === 'M' &&
-           Number(document.size.substring(0, document.size.length - 1)) > 100) ||
-          (document.size[document.size.length - 1] === 'B' &&
-           Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
-        console.log('Too large skipped: ' + document.title);
-        current++;
-        return;
-      }
-    } else if (document.size > 1024 * 1024 * 100) {
-      console.log('Too large skipped: ' + document.title);
-      current++;
-      return;
-    }
-
-    let fileStream = fs.createWriteStream(fileName);
-    let stream =
-        req({method: 'GET', uri: document.url, jar: cookies}).pipe(fileStream);
-    fileStream.on('finish', () => {
-      const buffer = readChunk.sync(fileName, 0, 4100);
-      let result = fileType(buffer);
-      let ext = 'txt';
-      if (result !== null) {
-        if (result.ext === 'msi') {
-          // BUG in file-type package
-          let cfb = CFB.read(fileName, {type: 'file'});
-          if (CFB.find(cfb, 'WordDocument') !== null)
-            result.ext = 'doc';
-          else if (CFB.find(cfb, 'Workbook') !== null)
-            result.ext = 'xls';
-          else if (CFB.find(cfb, 'PowerPoint Document') !== null)
-            result.ext = 'ppt';
-        }
-        ext = result.ext;
-      }
-      fs.renameSync(fileName, fileName + '.' + ext);
-      current++;
-      console.log(
-          current + ' / ' + all + ': ' + course.courseName + '/' +
-          document.title + ' Done');
-    });
-  });
-}
-
-// const blacklist = fs.readFileSync('blacklist').toString().split('\n')
-const learn2018_helper = new thulib.Learn2018HelperUtil(user);
-(async () => {
-  await learn2018_helper.login();
-  let courses18 = await learn2018_helper.getCourseList();
-  for (let course of courses18) {
+function getAndEnsureSaveFileDir(semester, course) {
+    let year = `${semester.startYear}-${semester.endYear}`;
+    let semesterType = semester.type;
+    let name = `${course.name}(${course.courseIndex})`;
     try {
-      let documents = await learn2018_helper.getDocuments(course);
-      callback(course, documents, learn2018_helper.cookies);
-
-      let notices = await learn2018_helper.getNotices(course);
-      for (let notice of notices) {
-        let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.title.replace(/\//gi, '_')}.txt`;
-        let fileStream = fs.createWriteStream(fileName);
-        fileStream.write(notice.content);
-        if (notice.attachmentName && notice.attachmentUrl) {
-          all++;
-          let fileName = `${getAndEnsureSaveFileDir(course)}/${notice.attachmentName}`;
-          let fileStream = fs.createWriteStream(fileName);
-          req({method: 'GET', uri: notice.attachmentUrl, jar: learn2018_helper.cookies}).pipe(fileStream);
-            fileStream.on('finish', () => {
-              current ++;
-              console.log(
-                  current + ' / ' + all + ': ' + course.courseName + '/' +
-                  notice.attachmentName + ' Done');
-            });
-        }
-      }
-    } catch (err) {
-      console.log('got err: %s', err);
+        fs.mkdirSync(`${rootDir}/${year}`);
+    } catch (e) {
     }
-  }
+    try {
+        fs.mkdirSync(`${rootDir}/${year}/${semesterType}`);
+    } catch (e) {
+    }
+    try {
+        fs.mkdirSync(`${rootDir}/${year}/${semesterType}/${name}`);
+    } catch (e) {
+    }
+    return `${rootDir}/${year}/${semesterType}/${name}`;
+}
+
+async function callback(semester, course, documents, cookies) {
+    documents = _.uniqBy(documents, 'title');
+    all += documents.length;
+    if (documents.length > 70) {
+        current += documents.length;
+        console.log(`${current}/${all}: Too many files skipped: ${course.name}`);
+        return;
+    }
+
+    for (let document of documents) {
+        if (Date.now() - new Date(document.uploadTime).getTime() >
+            1000 * 60 * 60 * 24 * 30) {
+            current++;
+            console.log(`${current}/${all}: Too old skipped: ${document.title}`);
+            return;
+        }
+
+        let title = document.title.replace(/\//gi, '_');
+
+        let dir = getAndEnsureSaveFileDir(semester, course);
+
+        let fileName = `${dir}/${title}.${document.fileType}`;
+
+        try {
+            const stats = fs.statSync(`${fileName}`);
+            if (isSameSize(document.size, stats.size)) {
+                current++;
+                console.log(`${current}/${all}: Already downloaded skipped: ${document.title}`);
+                return;
+            } else {
+                console.log(document);
+                console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
+            }
+        } catch (e) {
+
+        }
+
+        if (isNaN(document.size) && typeof document.size === 'string') {
+            if (document.size[document.size.length - 1] === 'G' ||
+                (document.size[document.size.length - 1] === 'M' &&
+                    Number(document.size.substring(0, document.size.length - 1)) > 100) ||
+                (document.size[document.size.length - 1] === 'B' &&
+                    Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
+                current++;
+                console.log(`${current}/${all}: Too large skipped: ${document.title}`);
+                return;
+            }
+        } else if (document.size > 1024 * 1024 * 100) {
+            current++;
+            console.log(`${current}/${all}: Too large skipped: ${document.title}`);
+            return;
+        }
+
+        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+        let result = await fetch(document.downloadUrl);
+        let fileStream = fs.createWriteStream(fileName);
+        result.body.pipe(fileStream);
+        current++;
+        console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloading`);
+    }
+}
+
+(async () => {
+    await helper.login(process.argv[2], process.argv[3]);
+    const semester = await helper.getCurrentSemester();
+    const courses = await helper.getCourseList(semester.id);
+    for (let course of courses) {
+        const files = await helper.getFileList(course.id);
+        await callback(semester, course, files, {});
+        const notifications = await helper.getNotificationList(course.id);
+        //console.log(notifications);
+    }
 })();

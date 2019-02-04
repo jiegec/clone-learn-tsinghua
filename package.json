@@ -10,11 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cfb": "^1.1.0",
-    "file-type": "^7.7.1",
+    "cross-fetch": "^3.0.1",
     "lodash": "^4.17.11",
-    "read-chunk": "^2.1.0",
-    "request": "^2.88.0",
-    "thulib": "file:../thulib"
+    "real-isomorphic-fetch": "^2.0.5",
+    "thu-learn-lib": "^1.0.1"
   }
 }
