@@ -73,7 +73,7 @@ async function callback(semester, course, documents, cookies) {
             1000 * 60 * 60 * 24 * 30) {
             current++;
             console.log(`${current}/${all}: Too old skipped: ${document.title}`);
-            return;
+            continue;
         }
 
         let title = document.title.replace(/\//gi, '_').trim();
@@ -87,10 +87,10 @@ async function callback(semester, course, documents, cookies) {
             if (isSameSize(document.size, stats.size)) {
                 current++;
                 console.log(`${current}/${all}: Already downloaded skipped: ${document.title}`);
-                return;
+                continue;
             } else {
                 console.log('Mismatch: ' + document.size + ' vs ' + stats.size);
-                return;
+                continue;
             }
         } catch (e) {
 
@@ -104,12 +104,12 @@ async function callback(semester, course, documents, cookies) {
                     Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
                 current++;
                 console.log(`${current}/${all}: Too large skipped: ${document.title}`);
-                return;
+                continue;
             }
         } else if (document.size > 1024 * 1024 * 100) {
             current++;
             console.log(`${current}/${all}: Too large skipped: ${document.title}`);
-            return;
+            continue;
         }
 
         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
