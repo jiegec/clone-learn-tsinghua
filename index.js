@@ -19,18 +19,12 @@ function bytesToSize(bytes) {
     if (bytes === 0) return '0B';
     var k = 1024, sizes = ['B', 'K', 'M', 'G'],
         i = Math.floor(Math.log(bytes) / Math.log(k));
-    if (i == 1 && (bytes / Math.pow(k, 2)) >= 0.95) // case of '0.9?M'
-        i = 2;
-    var tmp = String((bytes / Math.pow(k, i)).toFixed(2)); // size
-    if (i == 1 || tmp[tmp.length - 1] === '0') { // case of 'K' or remove the last 0
-        return String((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
-    } else {
-        return String((bytes / Math.pow(k, i)).toFixed(2)) + sizes[i];
-    }
+    return String(Math.floor(bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
 }
 
 function isSameSize(document_size, stats_size) {
     if (typeof document_size == 'string') {
+        console.log(document_size, stats_size);
         if (document_size[document_size.length - 1] === 'B') {
             return (document_size.substring(0, document_size.length - 1) == stats_size);
         } else {
@@ -64,6 +58,8 @@ function cleanFileName(fileName) {
     return fileName.replace(/\//gi, '_').trim();
 }
 
+let tasks = [];
+
 async function callback(semester, course, documents, cookies) {
     documents = _.uniqBy(documents, 'title');
     all += documents.length;
@@ -75,7 +71,7 @@ async function callback(semester, course, documents, cookies) {
 
     for (let document of documents) {
         if (Date.now() - new Date(document.uploadTime).getTime() >
-            1000 * 60 * 60 * 24 * 30) {
+            1000 * 60 * 60 * 24 * 14) {
             current++;
             console.log(`${current}/${all}: Too old skipped: ${document.title}`);
             continue;
@@ -116,15 +112,20 @@ async function callback(semester, course, documents, cookies) {
             continue;
         }
 
-        (async () => {
+        tasks.push((async () => {
             // launch async download task
             let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
             let result = await fetch(document.downloadUrl);
             let fileStream = fs.createWriteStream(fileName);
             result.body.pipe(fileStream);
-            current++;
-            console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
-        })();
+            await new Promise((resolve => {
+                fileStream.on('end', () => {
+                    current++;
+                    console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
+                    resolve();
+                });
+            }));
+        })());
     }
 }
 
@@ -174,16 +175,22 @@ async function callback(semester, course, documents, cookies) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all ++;
                     let fileName = `${dir}/${title}-${attachmentName}`;
-                    (async () => {
+                    tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(homework.submittedAttachmentUrl);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
-                        current++;
-                        console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                    })();
+                        await new Promise((resolve => {
+                            fileStream.on('end', () => {
+                                current++;
+                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                resolve();
+                            });
+                        }));
+                    })());
                 }
             }
         }
     }
+    await Promise.all(tasks);
 })();

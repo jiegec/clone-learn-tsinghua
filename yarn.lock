@@ -238,9 +238,9 @@ textversionjs@^1.1.3:
   integrity sha1-G3AK73gEZ3hoguKKsSb3fKMmoeg=
 
 thu-learn-lib@^1.0.12:
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-1.0.12.tgz#f37144bb736e5b3cead430fa78a7dea93811ef40"
-  integrity sha512-V0jQo02N6+mt6i5Q5C8Y6ardo/iqCdvar5sQMTVfdIdCMewYVePmqNv2BVR+kYm/NixopgGk1Lnwsxss9IrLgw==
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-1.0.13.tgz#f1919e2c1563abc136c8198bbef46fda4dc3dc04"
+  integrity sha512-MxCLlZZxHdl8YKxhXN+M9j1EMdUu3ATw3CBTGPp8SH+cg6QD+E7nxwO2oHE1+MaQHEhOly1rZG3FNzJOeS0P/w==
   dependencies:
     cheerio "^1.0.0-rc.2"
     cross-fetch "^3.0.1"
