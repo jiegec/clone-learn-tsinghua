@@ -19,12 +19,13 @@ function bytesToSize(bytes) {
     if (bytes === 0) return '0B';
     var k = 1024, sizes = ['B', 'K', 'M', 'G'],
         i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (i == 2)
+        return String(Math.floor(bytes / Math.pow(k, i)).toFixed(0)) + '.0' + sizes[i];
     return String(Math.floor(bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
 }
 
 function isSameSize(document_size, stats_size) {
     if (typeof document_size == 'string') {
-        console.log(document_size, stats_size);
         if (document_size[document_size.length - 1] === 'B') {
             return (document_size.substring(0, document_size.length - 1) == stats_size);
         } else {
