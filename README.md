@@ -1,6 +1,6 @@
 # clone-learn-tsinghua
 
-网络学堂文件、公告同步工具
+网络学堂文件、作业、公告同步工具
 
 # Usage
 
@@ -16,9 +16,9 @@ $ cp config.example.js config.js
 $ npm install
 ```
 
-最后
+最后运行
 
 ```
-node index.js
+$ node index.js
 ```
 
