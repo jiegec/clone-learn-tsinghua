@@ -59,7 +59,7 @@ function getAndEnsureSaveFileDir(semester, course) {
 }
 
 function cleanFileName(fileName) {
-    return fileName.replace(/\//gi, '_').trim();
+    return fileName.replace(/[\/\\:\*\?\"\<\>\|]/gi, '_').trim();
 }
 
 let tasks = [];
@@ -181,7 +181,7 @@ async function callback(semester, course, documents, cookies) {
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all ++;
-                    let fileName = `${dir}/${title}-${attachmentName}`;
+                    let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(homework.submittedAttachmentUrl);
