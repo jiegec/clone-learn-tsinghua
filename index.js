@@ -153,6 +153,24 @@ async function callback(semester, course, documents, cookies) {
                 fs.writeFileSync(file, textVersionJs(notification.content));
                 current ++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
+                if (notification.attachmentUrl && notification.attachmentName) {
+                    let attachmentName = cleanFileName(notification.attachmentName);
+                    all ++;
+                    let fileName = `${dir}/${title}-${attachmentName}`;
+                    tasks.push((async () => {
+                        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                        let result = await fetch(notification.attachmentUrl);
+                        let fileStream = fs.createWriteStream(fileName);
+                        result.body.pipe(fileStream);
+                        await new Promise((resolve => {
+                            fileStream.on('end', () => {
+                                current++;
+                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                resolve();
+                            });
+                        }));
+                    })());
+                }
             }
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
