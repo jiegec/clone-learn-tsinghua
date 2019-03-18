@@ -165,7 +165,7 @@ async function callback(semester, course, documents, cookies) {
                     let fileName = `${dir}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(notification.attachmentUrl);
+                        let result = await fetch(`https://learn.tsinghua.edu.cn${notification.attachmentUrl}`);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
                         await new Promise((resolve => {
