@@ -134,6 +134,7 @@ async function callback(semester, course, documents, cookies) {
     await helper.login(process.argv[2], process.argv[3]);
     const semesters = await helper.getSemesterIdList();
     for (let semesterId of semesters) {
+<<<<<<< HEAD
         let semester = {
             id: semesterId,
             startYear: Number(semesterId.slice(0, 4)),
@@ -156,14 +157,20 @@ async function callback(semester, course, documents, cookies) {
                 if (notification.attachmentUrl && notification.attachmentName) {
                     let attachmentName = cleanFileName(notification.attachmentName);
                     all ++;
-                    let fileName = `${dir}/${title}-${attachmentName}`;
+                    if (Date.now() - new Date(notification.publishTime).getTime() >
+                        1000 * 60 * 60 * 24 * 14) {
+                        current++;
+                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                        continue;
+                    }
+                    let fileName = `${dir}/notifications/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(notification.attachmentUrl);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
                         await new Promise((resolve => {
-                            fileStream.on('end', () => {
+                            fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                 resolve();
@@ -193,14 +200,44 @@ async function callback(semester, course, documents, cookies) {
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all ++;
-                    let fileName = `${dir}/${title}-${attachmentName}`;
+                    if (Date.now() - new Date(homework.deadline).getTime() >
+                        1000 * 60 * 60 * 24 * 14) {
+                        current++;
+                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                        continue;
+                    }
+                    let fileName = `${dir}/homeworks/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(homework.submittedAttachmentUrl);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
                         await new Promise((resolve => {
-                            fileStream.on('end', () => {
+                            fileStream.on('finish', () => {
+                                current++;
+                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                resolve();
+                            });
+                        }));
+                    })());
+                }
+                if (homework.attachmentUrl && homework.attachmentName) {
+                    let attachmentName = cleanFileName(homework.attachmentName);
+                    all ++;
+                    if (Date.now() - new Date(homework.deadline).getTime() >
+                        1000 * 60 * 60 * 24 * 14) {
+                        current++;
+                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                        continue;
+                    }
+                    let fileName = `${dir}/homeworks/${title}-${attachmentName}`;
+                    tasks.push((async () => {
+                        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                        let result = await fetch(homework.attachmentUrl);
+                        let fileStream = fs.createWriteStream(fileName);
+                        result.body.pipe(fileStream);
+                        await new Promise((resolve => {
+                            fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                 resolve();
