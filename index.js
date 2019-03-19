@@ -7,8 +7,10 @@ const crossFetch = require('cross-fetch');
 const realIsomorphicFetch = require('real-isomorphic-fetch');
 const textVersionJs = require('textversionjs');
 const htmlEntities = require('html-entities').AllHtmlEntities;
-
-const rootDir = '/Volumes/Data/jiegec/learn.tsinghua';
+const config = require('./config');
+const dirHomework = 'homework';
+const dirNotice = 'notice';
+const dirFile = 'file';
 
 let helper = new thuLearnLib.Learn2018Helper();
 
@@ -36,27 +38,28 @@ function isSameSize(document_size, stats_size) {
     }
 }
 
+function createPath(path) {
+    try {
+        fs.mkdirSync(path);
+    } catch (e) {
+    }
+}
+
 function getAndEnsureSaveFileDir(semester, course) {
-    let year = `${semester.startYear}-${semester.endYear}`;
-    let semesterType = semester.type;
+    let dirname = semester.dirname;
     let name = `${course.name}(${course.courseIndex})`;
-    try {
-        fs.mkdirSync(`${rootDir}/${year}`);
-    } catch (e) {
-    }
-    try {
-        fs.mkdirSync(`${rootDir}/${year}/${semesterType}`);
-    } catch (e) {
-    }
-    try {
-        fs.mkdirSync(`${rootDir}/${year}/${semesterType}/${name}`);
-    } catch (e) {
-    }
-    return `${rootDir}/${year}/${semesterType}/${name}`;
+    let path = `${config.rootDir}/${dirname}/${name}`;
+    createPath(`${config.rootDir}`);
+    createPath(`${config.rootDir}/${dirname}`);
+    createPath(`${config.rootDir}/${dirname}/${name}`);
+    createPath(`${config.rootDir}/${dirname}/${name}/${dirHomework}`);
+    createPath(`${config.rootDir}/${dirname}/${name}/${dirNotice}`);
+    createPath(`${config.rootDir}/${dirname}/${name}/${dirFile}`);
+    return path;
 }
 
 function cleanFileName(fileName) {
-    return fileName.replace(/\//gi, '_').trim();
+    return fileName.replace(/[\/\\:\*\?\"\<\>\|]/gi, '_').trim();
 }
 
 let tasks = [];
@@ -64,15 +67,15 @@ let tasks = [];
 async function callback(semester, course, documents, cookies) {
     documents = _.uniqBy(documents, 'title');
     all += documents.length;
-    if (documents.length > 70) {
+    if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
         current += documents.length;
         console.log(`${current}/${all}: Too many files skipped: ${course.name}`);
         return;
     }
 
     for (let document of documents) {
-        if (Date.now() - new Date(document.uploadTime).getTime() >
-            1000 * 60 * 60 * 24 * 14) {
+        if (config.ignoreDay !== -1 && Date.now() - new Date(document.uploadTime).getTime() >
+            1000 * 60 * 60 * 24 * config.ignoreDay) {
             current++;
             console.log(`${current}/${all}: Too old skipped: ${document.title}`);
             continue;
@@ -82,7 +85,7 @@ async function callback(semester, course, documents, cookies) {
 
         let dir = getAndEnsureSaveFileDir(semester, course);
 
-        let fileName = `${dir}/${title}.${document.fileType}`;
+        let fileName = `${dir}/${dirFile}/${title}.${document.fileType}`;
 
         try {
             const stats = fs.statSync(`${fileName}`);
@@ -97,20 +100,23 @@ async function callback(semester, course, documents, cookies) {
 
         }
 
-        if (isNaN(document.size) && typeof document.size === 'string') {
-            if (document.size[document.size.length - 1] === 'G' ||
-                (document.size[document.size.length - 1] === 'M' &&
-                    Number(document.size.substring(0, document.size.length - 1)) > 100) ||
-                (document.size[document.size.length - 1] === 'B' &&
-                    Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * 100)) {
+        if (config.ignoreSize !== -1) {
+            if (isNaN(document.size) && typeof document.size === 'string') {
+                if ((document.size[document.size.length - 1] === 'G' &&
+                        Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
+                    (document.size[document.size.length - 1] === 'M' &&
+                        Number(document.size.substring(0, document.size.length - 1)) > config.ignoreSize) ||
+                    (document.size[document.size.length - 1] === 'B' &&
+                        Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * config.ignoreSize)) {
+                    current++;
+                    console.log(`${current}/${all}: Too large skipped: ${document.title}`);
+                    continue;
+                }
+            } else if (document.size > 1024 * 1024 * config.ignoreSize) {
                 current++;
                 console.log(`${current}/${all}: Too large skipped: ${document.title}`);
                 continue;
             }
-        } else if (document.size > 1024 * 1024 * 100) {
-            current++;
-            console.log(`${current}/${all}: Too large skipped: ${document.title}`);
-            continue;
         }
 
         tasks.push((async () => {
@@ -120,7 +126,7 @@ async function callback(semester, course, documents, cookies) {
             let fileStream = fs.createWriteStream(fileName);
             result.body.pipe(fileStream);
             await new Promise((resolve => {
-                fileStream.on('end', () => {
+                fileStream.on('finish', () => {
                     current++;
                     console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
                     resolve();
@@ -131,14 +137,14 @@ async function callback(semester, course, documents, cookies) {
 }
 
 (async () => {
-    await helper.login(process.argv[2], process.argv[3]);
+    await helper.login(config.username, config.password);
     const semesters = await helper.getSemesterIdList();
     for (let semesterId of semesters) {
+        if (!(semesterId in config.semesters))
+            continue;
         let semester = {
             id: semesterId,
-            startYear: Number(semesterId.slice(0, 4)),
-            endYear: Number(semesterId.slice(5, 9)),
-            type: thuLearnLibUtil.parseSemesterType(Number(semesterId.slice(10, 11)))
+            dirname: config.semesters[semesterId],
         };
         const courses = await helper.getCourseList(semester.id);
         for (let course of courses) {
@@ -149,7 +155,7 @@ async function callback(semester, course, documents, cookies) {
             let dir = getAndEnsureSaveFileDir(semester, course);
             for (let notification of notifications) {
                 let title = cleanFileName(notification.title);
-                let file = `${dir}/${title}.txt`;
+                let file = `${dir}/${dirNotice}/${title}.txt`;
                 fs.writeFileSync(file, textVersionJs(notification.content));
                 current ++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
@@ -165,7 +171,7 @@ async function callback(semester, course, documents, cookies) {
                     let fileName = `${dir}/notifications/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(notification.attachmentUrl);
+                        let result = await fetch(`https://learn.tsinghua.edu.cn${notification.attachmentUrl}`);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
                         await new Promise((resolve => {
@@ -182,7 +188,7 @@ async function callback(semester, course, documents, cookies) {
             all += homeworks.length;
             for (let homework of homeworks) {
                 let title = cleanFileName(htmlEntities.decode(homework.title));
-                let file = `${dir}/${title}.txt`;
+                let file = `${dir}/${dirHomework}/${title}.txt`;
                 let content = '';
                 if (homework.description !== undefined) {
                     content += `说明： ${textVersionJs(homework.description)}\n`;
@@ -205,7 +211,7 @@ async function callback(semester, course, documents, cookies) {
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
                     }
-                    let fileName = `${dir}/homeworks/${title}-${attachmentName}`;
+                    let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(homework.submittedAttachmentUrl);
