@@ -168,7 +168,7 @@ async function callback(semester, course, documents, cookies) {
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
                     }
-                    let fileName = `${dir}/notifications/${title}-${attachmentName}`;
+                    let fileName = `${dir}/${dirNotice}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(`https://learn.tsinghua.edu.cn${notification.attachmentUrl}`);
@@ -235,7 +235,7 @@ async function callback(semester, course, documents, cookies) {
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
                     }
-                    let fileName = `${dir}/homeworks/${title}-${attachmentName}`;
+                    let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(homework.attachmentUrl);
