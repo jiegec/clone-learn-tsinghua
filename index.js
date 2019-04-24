@@ -162,8 +162,8 @@ async function callback(semester, course, documents, cookies) {
                 if (notification.attachmentUrl && notification.attachmentName) {
                     let attachmentName = cleanFileName(notification.attachmentName);
                     all ++;
-                    if (Date.now() - new Date(notification.publishTime).getTime() >
-                        1000 * 60 * 60 * 24 * 14) {
+                    if (config.ignoreDay !== -1 && Date.now() - new Date(notification.publishTime).getTime() >
+                        1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
@@ -171,7 +171,7 @@ async function callback(semester, course, documents, cookies) {
                     let fileName = `${dir}/${dirNotice}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(`https://learn.tsinghua.edu.cn${notification.attachmentUrl}`);
+                        let result = await fetch(notification.attachmentUrl);
                         let fileStream = fs.createWriteStream(fileName);
                         result.body.pipe(fileStream);
                         await new Promise((resolve => {
@@ -205,8 +205,8 @@ async function callback(semester, course, documents, cookies) {
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all ++;
-                    if (Date.now() - new Date(homework.deadline).getTime() >
-                        1000 * 60 * 60 * 24 * 14) {
+                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
+                        1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
@@ -229,8 +229,8 @@ async function callback(semester, course, documents, cookies) {
                 if (homework.attachmentUrl && homework.attachmentName) {
                     let attachmentName = cleanFileName(homework.attachmentName);
                     all ++;
-                    if (Date.now() - new Date(homework.deadline).getTime() >
-                        1000 * 60 * 60 * 24 * 14) {
+                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
+                        1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
                         continue;
