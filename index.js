@@ -1,8 +1,6 @@
 const fs = require('fs');
-const process = require('process');
 const _ = require('lodash');
 const thuLearnLib = require('thu-learn-lib');
-const thuLearnLibUtil = require('thu-learn-lib/lib/utils');
 const crossFetch = require('cross-fetch');
 const realIsomorphicFetch = require('real-isomorphic-fetch');
 const textVersionJs = require('textversionjs');
@@ -103,7 +101,7 @@ async function callback(semester, course, documents, cookies) {
         if (config.ignoreSize !== -1) {
             if (isNaN(document.size) && typeof document.size === 'string') {
                 if ((document.size[document.size.length - 1] === 'G' &&
-                        Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
+                    Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
                     (document.size[document.size.length - 1] === 'M' &&
                         Number(document.size.substring(0, document.size.length - 1)) > config.ignoreSize) ||
                     (document.size[document.size.length - 1] === 'B' &&
@@ -127,6 +125,7 @@ async function callback(semester, course, documents, cookies) {
             result.body.pipe(fileStream);
             await new Promise((resolve => {
                 fileStream.on('finish', () => {
+                    fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
                     current++;
                     console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
                     resolve();
@@ -157,11 +156,12 @@ async function callback(semester, course, documents, cookies) {
                 let title = cleanFileName(notification.title);
                 let file = `${dir}/${dirNotice}/${title}.txt`;
                 fs.writeFileSync(file, textVersionJs(notification.content));
-                current ++;
+                fs.utimesSync(file, notification.publishTime, notification.publishTime);
+                current++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
                 if (notification.attachmentUrl && notification.attachmentName) {
                     let attachmentName = cleanFileName(notification.attachmentName);
-                    all ++;
+                    all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(notification.publishTime).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
@@ -178,6 +178,7 @@ async function callback(semester, course, documents, cookies) {
                             fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
                                 resolve();
                             });
                         }));
@@ -200,11 +201,12 @@ async function callback(semester, course, documents, cookies) {
                     content += `评语： ${homework.gradeContent}\n`;
                 }
                 fs.writeFileSync(file, content);
-                current ++;
+                fs.utimesSync(file, homework.deadline, homework.deadline);
+                current++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
-                    all ++;
+                    all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
@@ -221,6 +223,7 @@ async function callback(semester, course, documents, cookies) {
                             fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                fs.utimesSync(fileName, homework.submitTime, homework.submitTime);
                                 resolve();
                             });
                         }));
@@ -228,7 +231,7 @@ async function callback(semester, course, documents, cookies) {
                 }
                 if (homework.attachmentUrl && homework.attachmentName) {
                     let attachmentName = cleanFileName(homework.attachmentName);
-                    all ++;
+                    all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
@@ -245,6 +248,7 @@ async function callback(semester, course, documents, cookies) {
                             fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                fs.utimesSync(fileName, homework.deadline, homework.deadline);
                                 resolve();
                             });
                         }));
