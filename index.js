@@ -195,7 +195,11 @@ async function callback(semester, course, documents, cookies) {
                     content += `说明： ${textVersionJs(homework.description)}\n`;
                 }
                 if (homework.grade !== undefined) {
-                    content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+                    if (homework.gradeLevel !== undefined) {
+                        content += `分数： ${homework.grade}(${homework.gradeLevel}) by ${homework.graderName}\n`;
+                    } else {
+                        content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+                    }
                 }
                 if (homework.gradeContent !== undefined) {
                     content += `评语： ${homework.gradeContent}\n`;
