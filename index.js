@@ -45,7 +45,7 @@ function createPath(path) {
 
 function getAndEnsureSaveFileDir(semester, course) {
     let dirname = semester.dirname;
-    let name = `${course.name}(${course.courseIndex})`;
+    let name = cleanFileName(`${course.name}(${course.courseIndex})`);
     let path = `${config.rootDir}/${dirname}/${name}`;
     createPath(`${config.rootDir}`);
     createPath(`${config.rootDir}/${dirname}`);
