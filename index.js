@@ -125,7 +125,11 @@ async function callback(semester, course, documents, cookies) {
             result.body.pipe(fileStream);
             await new Promise((resolve => {
                 fileStream.on('finish', () => {
-                    fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
+                    try {
+                        fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
+                    } catch(err) {
+                        console.log('got err %o when downloading', err);
+                    }
                     current++;
                     console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
                     resolve();
