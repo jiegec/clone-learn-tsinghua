@@ -131,7 +131,9 @@ async function callback(semester, course, documents, cookies) {
                     resolve();
                 });
             }));
-        })());
+        })().catch(err => {
+            console.log('got err %o when downloading', err);
+        }));
     }
 }
 
@@ -152,6 +154,8 @@ async function callback(semester, course, documents, cookies) {
             const notifications = await helper.getNotificationList(course.id);
             all += notifications.length;
             let dir = getAndEnsureSaveFileDir(semester, course);
+            
+            // notification
             for (let notification of notifications) {
                 let title = cleanFileName(notification.title);
                 let file = `${dir}/${dirNotice}/${title}.txt`;
@@ -185,6 +189,8 @@ async function callback(semester, course, documents, cookies) {
                     })());
                 }
             }
+
+            // homework
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
             for (let homework of homeworks) {
@@ -206,8 +212,11 @@ async function callback(semester, course, documents, cookies) {
                 }
                 fs.writeFileSync(file, content);
                 fs.utimesSync(file, homework.deadline, homework.deadline);
+
                 current++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
+
+                // submission
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all++;
@@ -233,6 +242,8 @@ async function callback(semester, course, documents, cookies) {
                         }));
                     })());
                 }
+
+                // attachment
                 if (homework.attachmentUrl && homework.attachmentName) {
                     let attachmentName = cleanFileName(homework.attachmentName);
                     all++;
