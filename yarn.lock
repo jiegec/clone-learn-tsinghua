@@ -3,9 +3,9 @@
 
 
 "@types/node@*":
-  version "12.0.10"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.0.10.tgz#51babf9c7deadd5343620055fc8aff7995c8b031"
-  integrity sha512-LcsGbPomWsad6wmMNv7nBLw7YYYyfdYcz6xryKYQhx89c3XXan+8Q6AJ43G5XDIaklaVkK3mE4fCb0SBvMiPSQ==
+  version "12.6.8"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.6.8.tgz#e469b4bf9d1c9832aee4907ba8a051494357c12c"
+  integrity sha512-aX+gFgA5GHcDi89KG5keey2zf0WfZk/HAQotEamsK2kbey+8yGKcson0hbK8E+v0NArlCJQCqMP161YhV6ZXLg==
 
 asynckit@^0.4.0:
   version "0.4.0"
@@ -111,9 +111,9 @@ es6-denodeify@^0.1.5:
   integrity sha1-MdTV/pxVA+ElRgQ5MQ4WoqPznB8=
 
 form-data@^2.3.3:
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/form-data/-/form-data-2.4.0.tgz#4902b831b051e0db5612a35e1a098376f7b13ad8"
-  integrity sha512-4FinE8RfqYnNim20xDwZZE0V2kOs/AuElIjFUbPuegQSaoZM+vUT5FnwSl10KPugH4voTg1bEQlcbCG9ka75TA==
+  version "2.5.0"
+  resolved "https://registry.yarnpkg.com/form-data/-/form-data-2.5.0.tgz#094ec359dc4b55e7d62e0db4acd76e89fe874d37"
+  integrity sha512-WXieX3G/8side6VIqx44ablyULoGruSde5PNTxoUyo5CeyAMX6nVWUd0rgist/EuX655cjhUhTo1Fo3tRYqbcA==
   dependencies:
     asynckit "^0.4.0"
     combined-stream "^1.0.6"
@@ -159,9 +159,9 @@ js-base64@^2.5.1:
   integrity sha512-M7kLczedRMYX4L8Mdh4MzyAMM9O5osx+4FcOQuTvr3A9F2D9S5JXheN0ewNbrvK2UatkTRhL5ejGmGSjNMiZuw==
 
 lodash@^4.15.0, lodash@^4.17.11:
-  version "4.17.11"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.11.tgz#b39ea6229ef607ecd89e2c8df12536891cac9b8d"
-  integrity sha512-cQKh8igo5QUhZ7lg38DYWAxMvjSAKG0A8wGSVimP07SIUEK2UO+arSRKbRZWtelMtN5V0Hkwh5ryOto/SshYIg==
+  version "4.17.15"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.15.tgz#b447f6670a0455bbfeedd11392eff330ea097548"
+  integrity sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==
 
 mime-db@1.40.0:
   version "1.40.0"
@@ -238,9 +238,9 @@ textversionjs@^1.1.3:
   integrity sha1-G3AK73gEZ3hoguKKsSb3fKMmoeg=
 
 thu-learn-lib@^1.1.3:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-1.1.3.tgz#8350405a17ad89cdacf9d16534d115bc637d243d"
-  integrity sha512-09gGeB5Lwq6u7d6QLrRX3eV9XkhJQH95yaH0n6XWmYt5wwsgRAmUfCih00ZET3ugRuxLj7kHAIRGcUrIh0WEGg==
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/thu-learn-lib/-/thu-learn-lib-1.1.4.tgz#df06b82b264e401a5ee31421c4cb9e2feaf97204"
+  integrity sha512-JCeBkq8b268O8wxiW26ZK4xyVRIZyQNFMPQoqzAjNBKw1hK1zdj9nMjLGycxj/cR6AG5oq2AYt7ftPLDohmpoQ==
   dependencies:
     cheerio "^1.0.0-rc.2"
     cross-fetch "^3.0.1"
