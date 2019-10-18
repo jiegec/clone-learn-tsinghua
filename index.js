@@ -45,7 +45,7 @@ function createPath(path) {
 
 function getAndEnsureSaveFileDir(semester, course) {
     let dirname = semester.dirname;
-    let name = `${course.name}(${course.courseIndex})`;
+    let name = cleanFileName(`${course.name}(${course.courseIndex})`);
     let path = `${config.rootDir}/${dirname}/${name}`;
     createPath(`${config.rootDir}`);
     createPath(`${config.rootDir}/${dirname}`);
@@ -125,13 +125,19 @@ async function callback(semester, course, documents, cookies) {
             result.body.pipe(fileStream);
             await new Promise((resolve => {
                 fileStream.on('finish', () => {
-                    fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
+                    try {
+                        fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
+                    } catch(err) {
+                        console.log('got err %o when downloading', err);
+                    }
                     current++;
                     console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
                     resolve();
                 });
             }));
-        })());
+        })().catch(err => {
+            console.log('got err %o when downloading', err);
+        }));
     }
 }
 
@@ -152,6 +158,8 @@ async function callback(semester, course, documents, cookies) {
             const notifications = await helper.getNotificationList(course.id);
             all += notifications.length;
             let dir = getAndEnsureSaveFileDir(semester, course);
+            
+            // notification
             for (let notification of notifications) {
                 let title = cleanFileName(notification.title);
                 let file = `${dir}/${dirNotice}/${title}.txt`;
@@ -185,6 +193,8 @@ async function callback(semester, course, documents, cookies) {
                     })());
                 }
             }
+
+            // homework
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
             for (let homework of homeworks) {
@@ -195,15 +205,22 @@ async function callback(semester, course, documents, cookies) {
                     content += `说明： ${textVersionJs(homework.description)}\n`;
                 }
                 if (homework.grade !== undefined) {
-                    content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+                    if (homework.gradeLevel !== undefined) {
+                        content += `分数： ${homework.grade}(${homework.gradeLevel}) by ${homework.graderName}\n`;
+                    } else {
+                        content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+                    }
                 }
                 if (homework.gradeContent !== undefined) {
                     content += `评语： ${homework.gradeContent}\n`;
                 }
                 fs.writeFileSync(file, content);
                 fs.utimesSync(file, homework.deadline, homework.deadline);
+
                 current++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
+
+                // submission
                 if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
                     let attachmentName = cleanFileName(homework.submittedAttachmentName);
                     all++;
@@ -229,6 +246,8 @@ async function callback(semester, course, documents, cookies) {
                         }));
                     })());
                 }
+
+                // attachment
                 if (homework.attachmentUrl && homework.attachmentName) {
                     let attachmentName = cleanFileName(homework.attachmentName);
                     all++;
