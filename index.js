@@ -1,12 +1,11 @@
 const fs = require('fs');
-const sys_path = require('path');
 const _ = require('lodash');
 const thuLearnLib = require('thu-learn-lib');
 const crossFetch = require('cross-fetch');
 const realIsomorphicFetch = require('real-isomorphic-fetch');
 const textVersionJs = require('textversionjs');
 const htmlEntities = require('html-entities').AllHtmlEntities;
-const config = require(sys_path.join(sys_path.dirname(process.execPath), 'config.js'));
+const config = require('./config');
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
