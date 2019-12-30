@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cross-fetch": "^3.0.1",
+    "cross-fetch": "^3.0.4",
     "html-entities": "^1.2.1",
     "lodash": "^4.17.11",
     "real-isomorphic-fetch": "^2.0.5",
