@@ -202,7 +202,7 @@ async function callback(semester, course, documents, cookies) {
                 let file = `${dir}/${dirHomework}/${title}.txt`;
                 let content = '';
                 if (homework.description !== undefined) {
-                    content += `说明： ${textVersionJs(homework.description)}\n`;
+                    content += `说明： ${textVersionJs(homework.description).replace(/&videoVersion=[0-9]+/, '')}\n`;
                 }
                 if (homework.grade !== undefined) {
                     if (homework.gradeLevel !== undefined) {
