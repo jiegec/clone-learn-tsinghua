@@ -153,7 +153,7 @@ async function callback(semester, course, documents, cookies) {
         };
         const courses = await helper.getCourseList(semester.id);
         for (let course of courses) {
-            const files = await helper.getFileList(course.id);
+            const files = await helper.getFileList(course.id, course.courseType);
             await callback(semester, course, files, {});
             const notifications = await helper.getNotificationList(course.id);
             all += notifications.length;
