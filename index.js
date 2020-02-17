@@ -127,7 +127,7 @@ async function callback(semester, course, documents, cookies) {
                 fileStream.on('finish', () => {
                     try {
                         fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
-                    } catch(err) {
+                    } catch (err) {
                         console.log('got err %o when downloading', err);
                     }
                     current++;
@@ -158,7 +158,7 @@ async function callback(semester, course, documents, cookies) {
             const notifications = await helper.getNotificationList(course.id);
             all += notifications.length;
             let dir = getAndEnsureSaveFileDir(semester, course);
-            
+
             // notification
             for (let notification of notifications) {
                 let title = cleanFileName(notification.title);
@@ -180,16 +180,21 @@ async function callback(semester, course, documents, cookies) {
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(notification.attachmentUrl);
-                        let fileStream = fs.createWriteStream(fileName);
-                        result.body.pipe(fileStream);
-                        await new Promise((resolve => {
-                            fileStream.on('finish', () => {
-                                current++;
-                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                                fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
-                                resolve();
-                            });
-                        }));
+                        let length = result.headers.get('Content-Length');
+                        if (length > 1024 * 1024 * config.ignoreSize) {
+                            console.log(`${current}/${all}: Too large skipped: ${attachmentName}`);
+                        } else {
+                            let fileStream = fs.createWriteStream(fileName);
+                            result.body.pipe(fileStream);
+                            await new Promise((resolve => {
+                                fileStream.on('finish', () => {
+                                    current++;
+                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
+                                    resolve();
+                                });
+                            }));
+                        }
                     })());
                 }
             }
