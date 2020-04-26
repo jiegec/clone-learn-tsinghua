@@ -1,11 +1,12 @@
-const fs = require('fs');
-const _ = require('lodash');
-const thuLearnLib = require('thu-learn-lib');
-const crossFetch = require('cross-fetch');
+import * as fs from 'fs';
+import * as _ from 'lodash';
+import * as thuLearnLib from 'thu-learn-lib';
+import { CourseInfo, File } from 'thu-learn-lib/lib/types';
+import * as crossFetch from 'cross-fetch';
 const realIsomorphicFetch = require('real-isomorphic-fetch');
-const textVersionJs = require('textversionjs');
-const htmlEntities = require('html-entities').AllHtmlEntities;
-const config = require('./config');
+import * as textVersionJs from 'textversionjs';
+import { AllHtmlEntities } from 'html-entities';
+import { config } from './config';
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
@@ -15,7 +16,7 @@ let helper = new thuLearnLib.Learn2018Helper();
 let current = 0;
 let all = 0;
 
-function bytesToSize(bytes) {
+function bytesToSize(bytes: number) {
     if (bytes === 0) return '0B';
     var k = 1024, sizes = ['B', 'K', 'M', 'G'],
         i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -24,26 +25,22 @@ function bytesToSize(bytes) {
     return String(Math.floor(bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
 }
 
-function isSameSize(document_size, stats_size) {
-    if (typeof document_size == 'string') {
-        if (document_size[document_size.length - 1] === 'B') {
-            return (document_size.substring(0, document_size.length - 1) == stats_size);
-        } else {
-            return (document_size == bytesToSize(stats_size));
-        }
+function isSameSize(document_size: string, stats_size: number) {
+    if (document_size[document_size.length - 1] === 'B') {
+        return (document_size.substring(0, document_size.length - 1) === stats_size.toString());
     } else {
-        return (document_size == stats_size);
+        return (document_size === bytesToSize(stats_size));
     }
 }
 
-function createPath(path) {
+function createPath(path: string) {
     try {
         fs.mkdirSync(path);
     } catch (e) {
     }
 }
 
-function getAndEnsureSaveFileDir(semester, course) {
+function getAndEnsureSaveFileDir(semester: { dirname: string }, course: CourseInfo) {
     let dirname = semester.dirname;
     let name = cleanFileName(`${course.name}(${course.courseIndex})`);
     let path = `${config.rootDir}/${dirname}/${name}`;
@@ -56,13 +53,13 @@ function getAndEnsureSaveFileDir(semester, course) {
     return path;
 }
 
-function cleanFileName(fileName) {
+function cleanFileName(fileName: string) {
     return fileName.replace(/[\/\\:\*\?\"\<\>\|]/gi, '_').trim();
 }
 
 let tasks = [];
 
-async function callback(semester, course, documents, cookies) {
+async function callback(semester: { id: string, dirname: string }, course: CourseInfo, documents: File[]) {
     documents = _.uniqBy(documents, 'title');
     all += documents.length;
     if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
@@ -99,7 +96,7 @@ async function callback(semester, course, documents, cookies) {
         }
 
         if (config.ignoreSize !== -1) {
-            if (isNaN(document.size) && typeof document.size === 'string') {
+            if (isNaN(parseFloat(document.size)) && typeof document.size === 'string') {
                 if ((document.size[document.size.length - 1] === 'G' &&
                     Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
                     (document.size[document.size.length - 1] === 'M' &&
@@ -110,7 +107,7 @@ async function callback(semester, course, documents, cookies) {
                     console.log(`${current}/${all}: Too large skipped: ${document.title}`);
                     continue;
                 }
-            } else if (document.size > 1024 * 1024 * config.ignoreSize) {
+            } else if (parseFloat(document.size) > 1024 * 1024 * config.ignoreSize) {
                 current++;
                 console.log(`${current}/${all}: Too large skipped: ${document.title}`);
                 continue;
@@ -145,16 +142,16 @@ async function callback(semester, course, documents, cookies) {
     await helper.login(config.username, config.password);
     const semesters = await helper.getSemesterIdList();
     for (let semesterId of semesters) {
-        if (!(semesterId in config.semesters))
+        if (!config.semesters.has(semesterId))
             continue;
         let semester = {
             id: semesterId,
-            dirname: config.semesters[semesterId],
+            dirname: config.semesters.get(semesterId)!,
         };
         const courses = await helper.getCourseList(semester.id);
         for (let course of courses) {
             const files = await helper.getFileList(course.id, course.courseType);
-            await callback(semester, course, files, {});
+            await callback(semester, course, files);
             const notifications = await helper.getNotificationList(course.id);
             all += notifications.length;
             let dir = getAndEnsureSaveFileDir(semester, course);
@@ -203,7 +200,7 @@ async function callback(semester, course, documents, cookies) {
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
             for (let homework of homeworks) {
-                let title = cleanFileName(htmlEntities.decode(homework.title));
+                let title = cleanFileName(AllHtmlEntities.decode(homework.title));
                 let file = `${dir}/${dirHomework}/${title}.txt`;
                 let content = '';
                 if (homework.description !== undefined) {
@@ -245,7 +242,8 @@ async function callback(semester, course, documents, cookies) {
                             fileStream.on('finish', () => {
                                 current++;
                                 console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                                fs.utimesSync(fileName, homework.submitTime, homework.submitTime);
+                                const time = homework.submitTime || new Date;
+                                fs.utimesSync(fileName, time, time);
                                 resolve();
                             });
                         }));

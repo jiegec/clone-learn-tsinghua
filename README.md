@@ -7,7 +7,7 @@
 首先把配置文件复制并修改该文件相应项
 
 ```
-$ cp config.example.js config.js
+$ cp config.example.ts config.ts
 ```
 
 然后安装依赖文件
@@ -19,7 +19,7 @@ $ npm install
 最后运行
 
 ```
-$ node index.js
+$ npm start
 ```
 
 # 打包成一个文件
