@@ -230,24 +230,24 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
-                        continue;
+                    } else {
+                        let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
+                        tasks.push((async () => {
+                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                            let result = await fetch(homework.submittedAttachmentUrl);
+                            let fileStream = fs.createWriteStream(fileName);
+                            result.body.pipe(fileStream);
+                            await new Promise((resolve => {
+                                fileStream.on('finish', () => {
+                                    current++;
+                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    const time = homework.submitTime || new Date;
+                                    fs.utimesSync(fileName, time, time);
+                                    resolve();
+                                });
+                            }));
+                        })());
                     }
-                    let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
-                    tasks.push((async () => {
-                        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(homework.submittedAttachmentUrl);
-                        let fileStream = fs.createWriteStream(fileName);
-                        result.body.pipe(fileStream);
-                        await new Promise((resolve => {
-                            fileStream.on('finish', () => {
-                                current++;
-                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                                const time = homework.submitTime || new Date;
-                                fs.utimesSync(fileName, time, time);
-                                resolve();
-                            });
-                        }));
-                    })());
                 }
 
                 // attachment
@@ -258,23 +258,50 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
-                        continue;
+                    } else {
+                        let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
+                        tasks.push((async () => {
+                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                            let result = await fetch(homework.attachmentUrl);
+                            let fileStream = fs.createWriteStream(fileName);
+                            result.body.pipe(fileStream);
+                            await new Promise((resolve => {
+                                fileStream.on('finish', () => {
+                                    current++;
+                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    fs.utimesSync(fileName, homework.deadline, homework.deadline);
+                                    resolve();
+                                });
+                            }));
+                        })());
                     }
-                    let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
-                    tasks.push((async () => {
-                        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(homework.attachmentUrl);
-                        let fileStream = fs.createWriteStream(fileName);
-                        result.body.pipe(fileStream);
-                        await new Promise((resolve => {
-                            fileStream.on('finish', () => {
-                                current++;
-                                console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                                fs.utimesSync(fileName, homework.deadline, homework.deadline);
-                                resolve();
-                            });
-                        }));
-                    })());
+                }
+
+                // grade attachment
+                if (homework.gradeAttachmentUrl && homework.gradeAttachmentName) {
+                    let attachmentName = cleanFileName(homework.gradeAttachmentName);
+                    all++;
+                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime).getTime() >
+                        1000 * 60 * 60 * 24 * config.ignoreDay) {
+                        current++;
+                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                    } else {
+                        let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
+                        tasks.push((async () => {
+                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+                            let result = await fetch(homework.gradeAttachmentUrl);
+                            let fileStream = fs.createWriteStream(fileName);
+                            result.body.pipe(fileStream);
+                            await new Promise((resolve => {
+                                fileStream.on('finish', () => {
+                                    current++;
+                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    fs.utimesSync(fileName, homework.gradeTime, homework.gradeTime);
+                                    resolve();
+                                });
+                            }));
+                        })());
+                    }
                 }
             }
         }
