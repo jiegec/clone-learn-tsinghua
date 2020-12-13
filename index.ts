@@ -129,7 +129,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     }
                     current++;
                     console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
-                    resolve();
+                    resolve(null);
                 });
             }));
         })().catch(err => {
@@ -188,7 +188,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                                     current++;
                                     console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
-                                    resolve();
+                                    resolve(null);
                                 });
                             }));
                         }
@@ -243,7 +243,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                                     console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                     const time = homework.submitTime || new Date;
                                     fs.utimesSync(fileName, time, time);
-                                    resolve();
+                                    resolve(null);
                                 });
                             }));
                         })());
@@ -270,7 +270,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                                     current++;
                                     console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, homework.deadline, homework.deadline);
-                                    resolve();
+                                    resolve(null);
                                 });
                             }));
                         })());
@@ -297,7 +297,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                                     current++;
                                     console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, homework.gradeTime, homework.gradeTime);
-                                    resolve();
+                                    resolve(null);
                                 });
                             }));
                         })());
