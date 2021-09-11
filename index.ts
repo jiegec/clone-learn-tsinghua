@@ -5,7 +5,7 @@ import { CourseInfo, File } from 'thu-learn-lib/lib/types';
 import * as crossFetch from 'cross-fetch';
 const realIsomorphicFetch = require('real-isomorphic-fetch');
 import * as textVersionJs from 'textversionjs';
-import { AllHtmlEntities } from 'html-entities';
+import * as htmlEntities from 'html-entities';
 import { config } from './config';
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
@@ -200,7 +200,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
             for (let homework of homeworks) {
-                let title = cleanFileName(AllHtmlEntities.decode(homework.title));
+                let title = cleanFileName(htmlEntities.decode(homework.title));
                 let file = `${dir}/${dirHomework}/${title}.txt`;
                 let content = '';
                 if (homework.description !== undefined) {
@@ -307,4 +307,6 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         }
     }
     await Promise.all(tasks);
-})();
+})().catch((err) => {
+    console.log(err);
+});
