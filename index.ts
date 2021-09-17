@@ -178,7 +178,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
                         let result = await fetch(notification.attachmentUrl);
                         let length = result.headers.get('Content-Length');
-                        if (length > 1024 * 1024 * config.ignoreSize) {
+                        if (config.ignoreSize !== -1 && length > 1024 * 1024 * config.ignoreSize) {
                             console.log(`${current}/${all}: Too large skipped: ${attachmentName}`);
                         } else {
                             let fileStream = fs.createWriteStream(fileName);
