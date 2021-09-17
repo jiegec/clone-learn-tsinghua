@@ -54,7 +54,7 @@ function getAndEnsureSaveFileDir(semester: { dirname: string }, course: CourseIn
 }
 
 function cleanFileName(fileName: string) {
-    return fileName.replace(/[\/\\:\*\?\"\<\>\|]/gi, '_').trim();
+    return fileName.replace(/[\/\\:\*\?\"\<\>\|]|[\x00-\x1F]/gi, '_').trim();
 }
 
 let tasks = [];
