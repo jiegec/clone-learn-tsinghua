@@ -164,8 +164,8 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 fs.utimesSync(file, notification.publishTime, notification.publishTime);
                 current++;
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
-                if (notification.attachmentUrl && notification.attachmentName) {
-                    let attachmentName = cleanFileName(notification.attachmentName);
+                if (notification.attachment?.downloadUrl && notification.attachment?.name) {
+                    let attachmentName = cleanFileName(notification.attachment.name);
                     all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(notification.publishTime).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
@@ -176,7 +176,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     let fileName = `${dir}/${dirNotice}/${title}-${attachmentName}`;
                     tasks.push((async () => {
                         let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(notification.attachmentUrl);
+                        let result = await fetch(notification.attachment.downloadUrl);
                         let length = result.headers.get('Content-Length');
                         if (config.ignoreSize !== -1 && length > 1024 * 1024 * config.ignoreSize) {
                             console.log(`${current}/${all}: Too large skipped: ${attachmentName}`);
@@ -223,8 +223,8 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
 
                 // submission
-                if (homework.submitted && homework.submittedAttachmentUrl && homework.submittedAttachmentName) {
-                    let attachmentName = cleanFileName(homework.submittedAttachmentName);
+                if (homework.submitted && homework.submittedAttachment?.downloadUrl && homework.submittedAttachment?.name) {
+                    let attachmentName = cleanFileName(homework.submittedAttachment.name);
                     all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
@@ -234,7 +234,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
                         tasks.push((async () => {
                             let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.submittedAttachmentUrl);
+                            let result = await fetch(homework.submittedAttachment.downloadUrl);
                             let fileStream = fs.createWriteStream(fileName);
                             result.body.pipe(fileStream);
                             await new Promise((resolve => {
@@ -251,8 +251,8 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 }
 
                 // attachment
-                if (homework.attachmentUrl && homework.attachmentName) {
-                    let attachmentName = cleanFileName(homework.attachmentName);
+                if (homework.attachment?.downloadUrl && homework.attachment?.name) {
+                    let attachmentName = cleanFileName(homework.attachment.name);
                     all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
@@ -262,7 +262,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                         tasks.push((async () => {
                             let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.attachmentUrl);
+                            let result = await fetch(homework.attachment.downloadUrl);
                             let fileStream = fs.createWriteStream(fileName);
                             result.body.pipe(fileStream);
                             await new Promise((resolve => {
@@ -278,8 +278,8 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 }
 
                 // grade attachment
-                if (homework.gradeAttachmentUrl && homework.gradeAttachmentName) {
-                    let attachmentName = cleanFileName(homework.gradeAttachmentName);
+                if (homework.gradeAttachment?.downloadUrl && homework.gradeAttachment?.name) {
+                    let attachmentName = cleanFileName(homework.gradeAttachment.name);
                     all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
@@ -289,7 +289,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
                         tasks.push((async () => {
                             let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.gradeAttachmentUrl);
+                            let result = await fetch(homework.gradeAttachment.downloadUrl);
                             let fileStream = fs.createWriteStream(fileName);
                             result.body.pipe(fileStream);
                             await new Promise((resolve => {
