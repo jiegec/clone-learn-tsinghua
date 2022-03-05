@@ -96,7 +96,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         }
 
         if (config.ignoreSize !== -1) {
-            if (isNaN(parseFloat(document.size)) && typeof document.size === 'string') {
+            if (isNaN(Number(document.size)) && typeof document.size === 'string') {
                 if ((document.size[document.size.length - 1] === 'G' &&
                     Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
                     (document.size[document.size.length - 1] === 'M' &&
@@ -107,7 +107,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     console.log(`${current}/${all}: Too large skipped: ${document.title}`);
                     continue;
                 }
-            } else if (parseFloat(document.size) > 1024 * 1024 * config.ignoreSize) {
+            } else if (Number(document.size) > 1024 * 1024 * config.ignoreSize) {
                 current++;
                 console.log(`${current}/${all}: Too large skipped: ${document.title}`);
                 continue;
