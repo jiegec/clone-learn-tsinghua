@@ -63,7 +63,7 @@ let tasks = [];
 
 const bar = new cliProgress.SingleBar({});
 
-bar.start(0, 0);
+// bar.start(0, 0);
 
 function progress(message: string) {
     console.log(`${current}/${all}: ${message}`);
@@ -148,6 +148,28 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             progress(`got err ${err} when downloading`);
         }));
     }
+}
+
+async function download(url: string, fileName: string, msg: string, time: Date) {
+    let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+    let result = await fetch(url);
+
+    if (result?.headers?.get('content-length')) {
+        let length = parseInt(result.headers.get('content-length'));
+        let mib = length / 1024 / 1024;
+        progress(`${msg} Downloading with size ${mib.toFixed(2)} MiB`);
+    }
+
+    let fileStream = fs.createWriteStream(fileName);
+    result.body.pipe(fileStream);
+    await new Promise((resolve => {
+        fileStream.on('finish', () => {
+            current++;
+            progress(`${msg} Downloaded`);
+            fs.utimesSync(fileName, time, time);
+            resolve(null);
+        });
+    }));
 }
 
 (async () => {
@@ -253,19 +275,12 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
                         tasks.push((async () => {
-                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.submittedAttachment.downloadUrl);
-                            let fileStream = fs.createWriteStream(fileName);
-                            result.body.pipe(fileStream);
-                            await new Promise((resolve => {
-                                fileStream.on('finish', () => {
-                                    current++;
-                                    progress(`${course.name}/${title}-submitted-${attachmentName} Downloaded`);
-                                    const time = homework.submitTime || new Date;
-                                    fs.utimesSync(fileName, time, time);
-                                    resolve(null);
-                                });
-                            }));
+                            const time = homework.submitTime || new Date;
+                            await download(homework.submittedAttachment.downloadUrl,
+                                fileName,
+                                `${course.name}/${title}-submitted-${attachmentName}`,
+                                time
+                            );
                         })());
                     }
                 }
@@ -281,18 +296,10 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                         tasks.push((async () => {
-                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.attachment.downloadUrl);
-                            let fileStream = fs.createWriteStream(fileName);
-                            result.body.pipe(fileStream);
-                            await new Promise((resolve => {
-                                fileStream.on('finish', () => {
-                                    current++;
-                                    progress(`${course.name}/${title}-${attachmentName} Downloaded`);
-                                    fs.utimesSync(fileName, homework.deadline, homework.deadline);
-                                    resolve(null);
-                                });
-                            }));
+                            await download(homework.attachment.downloadUrl,
+                                fileName,
+                                `${course.name}/${title}-${attachmentName}`,
+                                homework.deadline);
                         })());
                     }
                 }
