@@ -151,17 +151,29 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 }
 
 let activeTasks = 0;
+let freeTask = [];
 let taskLimit = 2;
 let downloadBars = [];
 for (let i = 0; i < taskLimit; i++) {
+    freeTask.push(true);
     downloadBars.push(multiBar.create());
 }
 
+function allocTask(): number {
+    activeTasks++;
+    for (let i = 0; i < taskLimit; i++) {
+        if (freeTask[i]) {
+            freeTask[i] = false;
+            return i;
+        }
+    }
+    return -1;
+}
+
+// https://stackoverflow.com/questions/50589034/async-requests-over-an-api-with-request-rate-limiter
 function waitInner(resolve: (number) => void) {
     if (activeTasks < taskLimit) {
-        let taskId = activeTasks;
-        activeTasks++;
-        resolve(taskId);
+        resolve(allocTask());
     } else {
         setTimeout(() => {
             waitInner(resolve);
@@ -177,10 +189,9 @@ function wait(): Promise<number> {
 
 async function download(url: string, fileName: string, msg: string, time: Date) {
     // task limit
-    let taskId = 0;
+    let taskId = -1;
     if (activeTasks < taskLimit) {
-        taskId = activeTasks;
-        activeTasks++;
+        taskId = allocTask();
     } else {
         taskId = await wait();
     }
@@ -218,6 +229,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
 
             // finish
             downloadBar.update(length);
+            freeTask[taskId] = true;
             activeTasks--;
             resolve(null);
         });
