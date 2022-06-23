@@ -63,7 +63,7 @@ let tasks = [];
 
 let multiBar = new cliProgress.MultiBar();
 
-const bar = multiBar.create();
+let bar = multiBar.create();
 
 function progress(message: string) {
     multiBar.log(`${current}/${all}: ${message}\n`);
@@ -150,23 +150,75 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
     }
 }
 
+let activeTasks = 0;
+let taskLimit = 2;
+let downloadBars = [];
+for (let i = 0; i < taskLimit; i++) {
+    downloadBars.push(multiBar.create());
+}
+
+function waitInner(resolve: (number) => void) {
+    if (activeTasks < taskLimit) {
+        let taskId = activeTasks;
+        activeTasks++;
+        resolve(taskId);
+    } else {
+        setTimeout(() => {
+            waitInner(resolve);
+        }, 100);
+    }
+}
+
+function wait(): Promise<number> {
+    return new Promise((resolve => {
+        waitInner(resolve);
+    }));
+}
+
 async function download(url: string, fileName: string, msg: string, time: Date) {
+    // task limit
+    let taskId = 0;
+    if (activeTasks < taskLimit) {
+        taskId = activeTasks;
+        activeTasks++;
+    } else {
+        taskId = await wait();
+    }
+
     let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
     let result = await fetch(url);
 
+    let length = -1;
+    let downloadBar = downloadBars[taskId];
+    downloadBar.update(0);
+    downloadBar.setTotal(0);
+
     if (result?.headers?.get('content-length')) {
-        let length = parseInt(result.headers.get('content-length'));
+        length = parseInt(result.headers.get('content-length'));
         let mib = length / 1024 / 1024;
         progress(`${msg} Downloading with size ${mib.toFixed(2)} MiB`);
+        downloadBar.setTotal(length);
     }
 
     let fileStream = fs.createWriteStream(fileName);
     result.body.pipe(fileStream);
+
+    // progress bar
+    let recv = 0;
+    result.body.on('data', (data) => {
+        recv += data.length;
+        downloadBar.update(recv);
+    });
+
     await new Promise((resolve => {
         fileStream.on('finish', () => {
             current++;
             progress(`${msg} Downloaded`);
             fs.utimesSync(fileName, time, time);
+
+            // finish
+            downloadBar.update(length);
+            activeTasks--;
             resolve(null);
         });
     }));
@@ -334,7 +386,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         }
     }
     await Promise.all(tasks);
-    bar.stop();
+    multiBar.stop();
 })().catch((err) => {
     console.log(err);
 });
