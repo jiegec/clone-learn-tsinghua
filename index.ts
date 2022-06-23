@@ -287,16 +287,10 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                         if (config.ignoreSize !== -1 && length > 1024 * 1024 * config.ignoreSize) {
                             progress(`Too large skipped: ${attachmentName}`);
                         } else {
-                            let fileStream = fs.createWriteStream(fileName);
-                            result.body.pipe(fileStream);
-                            await new Promise((resolve => {
-                                fileStream.on('finish', () => {
-                                    current++;
-                                    progress(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
-                                    fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
-                                    resolve(null);
-                                });
-                            }));
+                            await download(notification.attachment.downloadUrl,
+                                fileName,
+                                `${course.name}/${title}-${attachmentName}`,
+                                notification.publishTime);
                         }
                     })());
                 }
@@ -379,18 +373,10 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
                         tasks.push((async () => {
-                            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                            let result = await fetch(homework.gradeAttachment.downloadUrl);
-                            let fileStream = fs.createWriteStream(fileName);
-                            result.body.pipe(fileStream);
-                            await new Promise((resolve => {
-                                fileStream.on('finish', () => {
-                                    current++;
-                                    progress(`${course.name}/${title}-graded-${attachmentName} Downloaded`);
-                                    fs.utimesSync(fileName, homework.gradeTime, homework.gradeTime);
-                                    resolve(null);
-                                });
-                            }));
+                            await download(homework.gradeAttachment.downloadUrl,
+                                fileName,
+                                `${course.name}/${title}-graded-${attachmentName}`,
+                                homework.gradeTime);
                         })());
                     }
                 }
