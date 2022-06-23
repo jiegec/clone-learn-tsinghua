@@ -6,7 +6,9 @@ import * as crossFetch from 'cross-fetch';
 const realIsomorphicFetch = require('real-isomorphic-fetch');
 import * as textVersionJs from 'textversionjs';
 import * as htmlEntities from 'html-entities';
+import * as cliProgress from 'cli-progress';
 import { config } from './config';
+
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
@@ -138,13 +140,23 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
     }
 }
 
+const bar = new cliProgress.SingleBar({});
+
+bar.start(0, 0);
+
+function progress(message: string) {
+    bar.setTotal(all);
+    bar.update(current);
+    console.log(`${current}/${all}: ${message}`);
+}
+
 (async () => {
     await helper.login(config.username, config.password);
     const semesters = await helper.getSemesterIdList();
     all += semesters.length;
     for (let semesterId of semesters) {
         current++;
-        console.log(`${current}/${all}: Processing semester ${semesterId}`);
+        progress(`Processing semester ${semesterId}`);
 
         if (!config.semesters.has(semesterId))
             continue;
@@ -156,7 +168,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         all += courses.length;
         for (let course of courses) {
             current++;
-            console.log(`${current}/${all}: Processing course ${course.name} of semester ${semesterId}`);
+            progress(`Processing course ${course.name} of semester ${semesterId}`);
 
             const files = await helper.getFileList(course.id, course.courseType);
             await callback(semester, course, files);
@@ -171,14 +183,14 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 fs.writeFileSync(file, textVersionJs(notification.content));
                 fs.utimesSync(file, notification.publishTime, notification.publishTime);
                 current++;
-                console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
+                progress(`${course.name}/${title}.txt Saved`);
                 if (notification.attachment?.downloadUrl && notification.attachment?.name) {
                     let attachmentName = cleanFileName(notification.attachment.name);
                     all++;
                     if (config.ignoreDay !== -1 && Date.now() - new Date(notification.publishTime).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
-                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                        progress(`Too old skipped: ${title}-${attachmentName}`);
                         continue;
                     }
                     let fileName = `${dir}/${dirNotice}/${title}-${attachmentName}`;
@@ -187,14 +199,14 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         let result = await fetch(notification.attachment.downloadUrl);
                         let length = result.headers.get('Content-Length');
                         if (config.ignoreSize !== -1 && length > 1024 * 1024 * config.ignoreSize) {
-                            console.log(`${current}/${all}: Too large skipped: ${attachmentName}`);
+                            progress(`Too large skipped: ${attachmentName}`);
                         } else {
                             let fileStream = fs.createWriteStream(fileName);
                             result.body.pipe(fileStream);
                             await new Promise((resolve => {
                                 fileStream.on('finish', () => {
                                     current++;
-                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    progress(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, notification.publishTime, notification.publishTime);
                                     resolve(null);
                                 });
@@ -228,7 +240,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 fs.utimesSync(file, homework.deadline, homework.deadline);
 
                 current++;
-                console.log(`${current}/${all}: ${course.name}/${title}.txt Saved`);
+                progress(`${course.name}/${title}.txt Saved`);
 
                 // submission
                 if (homework.submitted && homework.submittedAttachment?.downloadUrl && homework.submittedAttachment?.name) {
@@ -237,7 +249,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
-                        console.log(`${current}/${all}: Too old skipped: ${title}-submitted-${attachmentName}`);
+                        progress(`Too old skipped: ${title}-submitted-${attachmentName}`);
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
                         tasks.push((async () => {
@@ -248,7 +260,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                             await new Promise((resolve => {
                                 fileStream.on('finish', () => {
                                     current++;
-                                    console.log(`${current}/${all}: ${course.name}/${title}-submitted-${attachmentName} Downloaded`);
+                                    progress(`${course.name}/${title}-submitted-${attachmentName} Downloaded`);
                                     const time = homework.submitTime || new Date;
                                     fs.utimesSync(fileName, time, time);
                                     resolve(null);
@@ -265,7 +277,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
-                        console.log(`${current}/${all}: Too old skipped: ${title}-${attachmentName}`);
+                        progress(`Too old skipped: ${title}-${attachmentName}`);
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                         tasks.push((async () => {
@@ -276,7 +288,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                             await new Promise((resolve => {
                                 fileStream.on('finish', () => {
                                     current++;
-                                    console.log(`${current}/${all}: ${course.name}/${title}-${attachmentName} Downloaded`);
+                                    progress(`${course.name}/${title}-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, homework.deadline, homework.deadline);
                                     resolve(null);
                                 });
@@ -292,7 +304,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
-                        console.log(`${current}/${all}: Too old skipped: ${title}-graded-${attachmentName}`);
+                        progress(`Too old skipped: ${title}-graded-${attachmentName}`);
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
                         tasks.push((async () => {
@@ -303,7 +315,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                             await new Promise((resolve => {
                                 fileStream.on('finish', () => {
                                     current++;
-                                    console.log(`${current}/${all}: ${course.name}/${title}-graded-${attachmentName} Downloaded`);
+                                    progress(`${course.name}/${title}-graded-${attachmentName} Downloaded`);
                                     fs.utimesSync(fileName, homework.gradeTime, homework.gradeTime);
                                     resolve(null);
                                 });
@@ -315,6 +327,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         }
     }
     await Promise.all(tasks);
+    bar.stop();
 })().catch((err) => {
     console.log(err);
 });
