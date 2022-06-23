@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/lodash": "^4.14.150",
     "@types/textversionjs": "^1.1.0",
+    "cli-progress": "^3.11.1",
     "cross-fetch": "^3.0.4",
     "eslint": "^8.2.0",
     "html-entities": "^2.3.2",

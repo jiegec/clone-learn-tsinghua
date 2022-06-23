@@ -141,7 +141,11 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 (async () => {
     await helper.login(config.username, config.password);
     const semesters = await helper.getSemesterIdList();
+    all += semesters.length;
     for (let semesterId of semesters) {
+        current++;
+        console.log(`${current}/${all}: Processing semester ${semesterId}`);
+
         if (!config.semesters.has(semesterId))
             continue;
         let semester = {
@@ -149,14 +153,18 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             dirname: config.semesters.get(semesterId)!,
         };
         const courses = await helper.getCourseList(semester.id);
+        all += courses.length;
         for (let course of courses) {
+            current++;
+            console.log(`${current}/${all}: Processing course ${course.name} of semester ${semesterId}`);
+
             const files = await helper.getFileList(course.id, course.courseType);
             await callback(semester, course, files);
             const notifications = await helper.getNotificationList(course.id);
-            all += notifications.length;
             let dir = getAndEnsureSaveFileDir(semester, course);
 
             // notification
+            all += notifications.length;
             for (let notification of notifications) {
                 let title = cleanFileName(notification.title);
                 let file = `${dir}/${dirNotice}/${title}.txt`;
