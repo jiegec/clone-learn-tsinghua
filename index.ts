@@ -61,12 +61,12 @@ function cleanFileName(fileName: string) {
 
 let tasks = [];
 
-const bar = new cliProgress.SingleBar({});
+let multiBar = new cliProgress.MultiBar();
 
-// bar.start(0, 0);
+const bar = multiBar.create();
 
 function progress(message: string) {
-    console.log(`${current}/${all}: ${message}`);
+    multiBar.log(`${current}/${all}: ${message}\n`);
     bar.setTotal(all);
     bar.update(current);
 }
