@@ -61,12 +61,22 @@ function cleanFileName(fileName: string) {
 
 let tasks = [];
 
+const bar = new cliProgress.SingleBar({});
+
+bar.start(0, 0);
+
+function progress(message: string) {
+    console.log(`${current}/${all}: ${message}`);
+    bar.setTotal(all);
+    bar.update(current);
+}
+
 async function callback(semester: { id: string, dirname: string }, course: CourseInfo, documents: File[]) {
     documents = _.uniqBy(documents, 'title');
     all += documents.length;
     if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
         current += documents.length;
-        console.log(`${current}/${all}: Too many files skipped: ${course.name}`);
+        progress(`Too many files skipped: ${course.name}`);
         return;
     }
 
@@ -74,7 +84,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         if (config.ignoreDay !== -1 && Date.now() - new Date(document.uploadTime).getTime() >
             1000 * 60 * 60 * 24 * config.ignoreDay) {
             current++;
-            console.log(`${current}/${all}: Too old skipped: ${document.title}`);
+            progress(`Too old skipped: ${document.title}`);
             continue;
         }
 
@@ -88,10 +98,10 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             const stats = fs.statSync(`${fileName}`);
             if (isSameSize(document.size, stats.size)) {
                 current++;
-                console.log(`${current}/${all}: Already downloaded skipped: ${document.title}`);
+                progress(`Already downloaded skipped: ${document.title}`);
                 continue;
             } else {
-                console.log(`${document.title} Size mismatch: ` + document.size + ' vs ' + stats.size);
+                progress(`${document.title} Size mismatch: ` + document.size + ' vs ' + stats.size);
             }
         } catch (e) {
 
@@ -106,12 +116,12 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     (document.size[document.size.length - 1] === 'B' &&
                         Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * config.ignoreSize)) {
                     current++;
-                    console.log(`${current}/${all}: Too large skipped: ${document.title}`);
+                    progress(`Too large skipped: ${document.title}`);
                     continue;
                 }
             } else if (Number(document.size) > 1024 * 1024 * config.ignoreSize) {
                 current++;
-                console.log(`${current}/${all}: Too large skipped: ${document.title}`);
+                progress(`Too large skipped: ${document.title}`);
                 continue;
             }
         }
@@ -127,27 +137,17 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     try {
                         fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
                     } catch (err) {
-                        console.log('got err %o when downloading', err);
+                        progress(`got err ${err} when downloading`);
                     }
                     current++;
-                    console.log(`${current}/${all}: ${course.name}/${document.title}.${document.fileType} Downloaded`);
+                    progress(`${course.name}/${document.title}.${document.fileType} Downloaded`);
                     resolve(null);
                 });
             }));
         })().catch(err => {
-            console.log('got err %o when downloading', err);
+            progress(`got err ${err} when downloading`);
         }));
     }
-}
-
-const bar = new cliProgress.SingleBar({});
-
-bar.start(0, 0);
-
-function progress(message: string) {
-    bar.setTotal(all);
-    bar.update(current);
-    console.log(`${current}/${all}: ${message}`);
 }
 
 (async () => {
