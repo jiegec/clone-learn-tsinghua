@@ -1,19 +1,22 @@
-import * as fs from 'fs';
-import * as _ from 'lodash';
-import * as thuLearnLib from 'thu-learn-lib';
-import { CourseInfo, File } from 'thu-learn-lib/lib/types';
-import * as crossFetch from 'cross-fetch';
-const realIsomorphicFetch = require('real-isomorphic-fetch');
-import * as textVersionJs from 'textversionjs';
-import * as htmlEntities from 'html-entities';
-import * as cliProgress from 'cli-progress';
-import { config } from './config';
+import fs from 'fs';
+import _ from 'lodash';
+import { CourseInfo, File, Learn2018Helper } from 'thu-learn-lib';
+import textVersionJs from 'textversionjs';
+import { decode as htmlEntitiesDecode } from 'html-entities';
+import { MultiBar, SingleBar } from 'cli-progress';
+import { CookieJar } from 'tough-cookie';
+import { config } from './config.js';
+import { Readable } from 'stream';
+import { ReadableStream } from 'stream/web';
 
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
 
-let helper = new thuLearnLib.Learn2018Helper();
+let cookieJar = new CookieJar();
+let helper = new Learn2018Helper({
+    cookieJar,
+});
 
 let current = 0;
 let all = 0;
@@ -61,9 +64,9 @@ function cleanFileName(fileName: string) {
 
 let tasks = [];
 
-let multiBar = new cliProgress.MultiBar();
+let multiBar = new MultiBar({});
 
-let bar = multiBar.create();
+let bar = multiBar.create(1, 0);
 
 function progress(message: string) {
     multiBar.log(`${current}/${all}: ${message}\n`);
@@ -128,10 +131,10 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
         tasks.push((async () => {
             // launch async download task
-            let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
             let result = await fetch(document.downloadUrl);
             let fileStream = fs.createWriteStream(fileName);
-            result.body.pipe(fileStream);
+            let bodyStream = Readable.fromWeb((result.body!) as ReadableStream<any>);
+            bodyStream.pipe(fileStream);
             await new Promise((resolve => {
                 fileStream.on('finish', () => {
                     try {
@@ -151,12 +154,12 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 }
 
 let activeTasks = 0;
-let freeTask = [];
+let freeTask: boolean[] = [];
 let taskLimit = 2;
-let downloadBars = [];
+let downloadBars: SingleBar[] = [];
 for (let i = 0; i < taskLimit; i++) {
     freeTask.push(true);
-    downloadBars.push(multiBar.create());
+    downloadBars.push(multiBar.create(1, 0));
 }
 
 function allocTask(): number {
@@ -171,7 +174,7 @@ function allocTask(): number {
 }
 
 // https://stackoverflow.com/questions/50589034/async-requests-over-an-api-with-request-rate-limiter
-function waitInner(resolve: (number) => void) {
+function waitInner(resolve: (number: number) => void) {
     if (activeTasks < taskLimit) {
         resolve(allocTask());
     } else {
@@ -196,7 +199,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         taskId = await wait();
     }
 
-    let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
+    // let fetch = makeFetch(cookieJar);
     let result = await fetch(url);
 
     let length = -1;
@@ -205,18 +208,19 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
     downloadBar.setTotal(0);
 
     if (result?.headers?.get('content-length')) {
-        length = parseInt(result.headers.get('content-length'));
+        length = parseInt(result.headers.get('content-length')!);
         let mib = length / 1024 / 1024;
         progress(`${msg} Downloading with size ${mib.toFixed(2)} MiB`);
         downloadBar.setTotal(length);
     }
 
     let fileStream = fs.createWriteStream(fileName);
-    result.body.pipe(fileStream);
+    let bodyStream = Readable.fromWeb((result.body!) as ReadableStream<any>);
+    bodyStream.pipe(fileStream);
 
     // progress bar
     let recv = 0;
-    result.body.on('data', (data) => {
+    bodyStream.on('data', (data: any) => {
         recv += data.length;
         downloadBar.update(recv);
     });
@@ -281,13 +285,12 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                     }
                     let fileName = `${dir}/${dirNotice}/${title}-${attachmentName}`;
                     tasks.push((async () => {
-                        let fetch = new realIsomorphicFetch(crossFetch, helper.cookieJar);
-                        let result = await fetch(notification.attachment.downloadUrl);
-                        let length = result.headers.get('Content-Length');
+                        let result = await fetch(notification.attachment!.downloadUrl);
+                        let length = parseInt(result.headers.get('Content-Length')!);
                         if (config.ignoreSize !== -1 && length > 1024 * 1024 * config.ignoreSize) {
                             progress(`Too large skipped: ${attachmentName}`);
                         } else {
-                            await download(notification.attachment.downloadUrl,
+                            await download(notification.attachment!.downloadUrl,
                                 fileName,
                                 `${course.name}/${title}-${attachmentName}`,
                                 notification.publishTime);
@@ -300,7 +303,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
             const homeworks = await helper.getHomeworkList(course.id);
             all += homeworks.length;
             for (let homework of homeworks) {
-                let title = cleanFileName(htmlEntities.decode(homework.title));
+                let title = cleanFileName(htmlEntitiesDecode(homework.title));
                 let file = `${dir}/${dirHomework}/${title}.txt`;
                 let content = '';
                 if (homework.description !== undefined) {
@@ -334,7 +337,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                         let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
                         tasks.push((async () => {
                             const time = homework.submitTime || new Date;
-                            await download(homework.submittedAttachment.downloadUrl,
+                            await download(homework.submittedAttachment!.downloadUrl,
                                 fileName,
                                 `${course.name}/${title}-submitted-${attachmentName}`,
                                 time
@@ -354,7 +357,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
                         tasks.push((async () => {
-                            await download(homework.attachment.downloadUrl,
+                            await download(homework.attachment!.downloadUrl,
                                 fileName,
                                 `${course.name}/${title}-${attachmentName}`,
                                 homework.deadline);
@@ -366,17 +369,17 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
                 if (homework.gradeAttachment?.downloadUrl && homework.gradeAttachment?.name) {
                     let attachmentName = cleanFileName(homework.gradeAttachment.name);
                     all++;
-                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime).getTime() >
+                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime!).getTime() >
                         1000 * 60 * 60 * 24 * config.ignoreDay) {
                         current++;
                         progress(`Too old skipped: ${title}-graded-${attachmentName}`);
                     } else {
                         let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
                         tasks.push((async () => {
-                            await download(homework.gradeAttachment.downloadUrl,
+                            await download(homework.gradeAttachment!.downloadUrl,
                                 fileName,
                                 `${course.name}/${title}-graded-${attachmentName}`,
-                                homework.gradeTime);
+                                homework.gradeTime!);
                         })());
                     }
                 }
