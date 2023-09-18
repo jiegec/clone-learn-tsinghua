@@ -377,6 +377,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         }
     }
     await Promise.all(tasks);
+    multiBar.update();
     multiBar.stop();
 })().catch((err) => {
     console.log(err);
