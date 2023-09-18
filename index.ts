@@ -199,8 +199,11 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         taskId = await wait();
     }
 
-    // let fetch = makeFetch(cookieJar);
-    let result = await fetch(url);
+    let result = await fetch(url, {
+        headers: {
+            'Cookie': await cookieJar.getCookieString("http://learn.tsinghua.edu.cn")
+        }
+    });
 
     let length = -1;
     let downloadBar = downloadBars[taskId];
