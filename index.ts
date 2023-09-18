@@ -74,85 +74,6 @@ function progress(message: string) {
     bar.update(current);
 }
 
-async function callback(semester: { id: string, dirname: string }, course: CourseInfo, documents: File[]) {
-    documents = _.uniqBy(documents, 'title');
-    all += documents.length;
-    if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
-        current += documents.length;
-        progress(`Too many files skipped: ${course.name}`);
-        return;
-    }
-
-    for (let document of documents) {
-        if (config.ignoreDay !== -1 && Date.now() - new Date(document.uploadTime).getTime() >
-            1000 * 60 * 60 * 24 * config.ignoreDay) {
-            current++;
-            progress(`Too old skipped: ${document.title}`);
-            continue;
-        }
-
-        let title = cleanFileName(document.title);
-
-        let dir = getAndEnsureSaveFileDir(semester, course);
-
-        let fileName = `${dir}/${dirFile}/${title}.${document.fileType}`;
-
-        try {
-            const stats = fs.statSync(`${fileName}`);
-            if (isSameSize(document.size, stats.size)) {
-                current++;
-                progress(`Already downloaded skipped: ${document.title}`);
-                continue;
-            } else {
-                progress(`${document.title} Size mismatch: ` + document.size + ' vs ' + stats.size);
-            }
-        } catch (e) {
-
-        }
-
-        if (config.ignoreSize !== -1) {
-            if (isNaN(Number(document.size)) && typeof document.size === 'string') {
-                if ((document.size[document.size.length - 1] === 'G' &&
-                    Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
-                    (document.size[document.size.length - 1] === 'M' &&
-                        Number(document.size.substring(0, document.size.length - 1)) > config.ignoreSize) ||
-                    (document.size[document.size.length - 1] === 'B' &&
-                        Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * config.ignoreSize)) {
-                    current++;
-                    progress(`Too large skipped: ${document.title}`);
-                    continue;
-                }
-            } else if (Number(document.size) > 1024 * 1024 * config.ignoreSize) {
-                current++;
-                progress(`Too large skipped: ${document.title}`);
-                continue;
-            }
-        }
-
-        tasks.push((async () => {
-            // launch async download task
-            let result = await fetch(document.downloadUrl);
-            let fileStream = fs.createWriteStream(fileName);
-            let bodyStream = Readable.fromWeb((result.body!) as ReadableStream<any>);
-            bodyStream.pipe(fileStream);
-            await new Promise((resolve => {
-                fileStream.on('finish', () => {
-                    try {
-                        fs.utimesSync(fileName, document.uploadTime, document.uploadTime);
-                    } catch (err) {
-                        progress(`got err ${err} when downloading`);
-                    }
-                    current++;
-                    progress(`${course.name}/${document.title}.${document.fileType} Downloaded`);
-                    resolve(null);
-                });
-            }));
-        })().catch(err => {
-            progress(`got err ${err} when downloading`);
-        }));
-    }
-}
-
 let activeTasks = 0;
 let freeTask: boolean[] = [];
 let taskLimit = 2;
@@ -241,6 +162,72 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
             resolve(null);
         });
     }));
+}
+
+async function callback(semester: { id: string, dirname: string }, course: CourseInfo, documents: File[]) {
+    documents = _.uniqBy(documents, 'title');
+    all += documents.length;
+    if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
+        current += documents.length;
+        progress(`Too many files skipped: ${course.name}`);
+        return;
+    }
+
+    for (let document of documents) {
+        if (config.ignoreDay !== -1 && Date.now() - new Date(document.uploadTime).getTime() >
+            1000 * 60 * 60 * 24 * config.ignoreDay) {
+            current++;
+            progress(`Too old skipped: ${document.title}`);
+            continue;
+        }
+
+        let title = cleanFileName(document.title);
+
+        let dir = getAndEnsureSaveFileDir(semester, course);
+
+        let fileName = `${dir}/${dirFile}/${title}.${document.fileType}`;
+
+        try {
+            const stats = fs.statSync(`${fileName}`);
+            if (isSameSize(document.size, stats.size)) {
+                current++;
+                progress(`Already downloaded skipped: ${document.title}`);
+                continue;
+            } else {
+                progress(`${document.title} Size mismatch: ` + document.size + ' vs ' + stats.size);
+            }
+        } catch (e) {
+
+        }
+
+        if (config.ignoreSize !== -1) {
+            if (isNaN(Number(document.size)) && typeof document.size === 'string') {
+                if ((document.size[document.size.length - 1] === 'G' &&
+                    Number(document.size.substring(0, document.size.length - 1)) * 1024 > config.ignoreSize) ||
+                    (document.size[document.size.length - 1] === 'M' &&
+                        Number(document.size.substring(0, document.size.length - 1)) > config.ignoreSize) ||
+                    (document.size[document.size.length - 1] === 'B' &&
+                        Number(document.size.substring(0, document.size.length - 1)) > 1024 * 1024 * config.ignoreSize)) {
+                    current++;
+                    progress(`Too large skipped: ${document.title}`);
+                    continue;
+                }
+            } else if (Number(document.size) > 1024 * 1024 * config.ignoreSize) {
+                current++;
+                progress(`Too large skipped: ${document.title}`);
+                continue;
+            }
+        }
+
+        tasks.push((async () => {
+            await download(document.downloadUrl,
+                fileName,
+                `${course.name}/${document.title}.${document.fileType}`,
+                document.uploadTime);
+        })().catch(err => {
+            progress(`got err ${err} when downloading`);
+        }));
+    }
 }
 
 (async () => {
@@ -390,6 +377,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         }
     }
     await Promise.all(tasks);
+    multiBar.update();
     multiBar.stop();
 })().catch((err) => {
     console.log(err);
