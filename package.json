@@ -6,7 +6,7 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "start": "tsc && node index.js"
+    "start": "tsc && node --openssl-config=openssl.cnf index.js"
   },
   "author": "",
   "license": "ISC",
