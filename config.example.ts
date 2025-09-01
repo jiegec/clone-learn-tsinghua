@@ -29,4 +29,5 @@ export let config = {
     ]),
     username: 'xxx17',   // 网络学堂用户名
     password: 'xxxxxx', // 网络学堂密码
+    fingerPrint: 'xxxxxx', // id.tsinghua.edu.cn 的 fingerprint，见 https://github.com/Harry-Chen/thu-learn-lib
 };

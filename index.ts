@@ -1,10 +1,9 @@
 import fs from 'fs';
 import _ from 'lodash';
-import { CourseInfo, File, Learn2018Helper } from 'thu-learn-lib';
+import { CourseInfo, File, Learn2018Helper, addCSRFTokenToUrl } from 'thu-learn-lib';
 import textVersionJs from 'textversionjs';
 import { decode as htmlEntitiesDecode } from 'html-entities';
 import { MultiBar, SingleBar } from 'cli-progress';
-import { CookieJar } from 'tough-cookie';
 import { config } from './config.js';
 import { Readable } from 'stream';
 import { ReadableStream } from 'stream/web';
@@ -13,10 +12,7 @@ const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
 
-let cookieJar = new CookieJar();
-let helper = new Learn2018Helper({
-    cookieJar,
-});
+let helper = new Learn2018Helper();
 
 let current = 0;
 let all = 0;
@@ -120,11 +116,9 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         taskId = await wait();
     }
 
-    let result = await fetch(url, {
-        headers: {
-            'Cookie': await cookieJar.getCookieString("http://learn.tsinghua.edu.cn")
-        }
-    });
+    let temp = addCSRFTokenToUrl(url, helper.getCSRFToken());
+    console.log("%o", temp);
+    let result = await fetch(addCSRFTokenToUrl(url, helper.getCSRFToken()));
 
     let length = -1;
     let downloadBar = downloadBars[taskId];
@@ -231,7 +225,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 }
 
 (async () => {
-    await helper.login(config.username, config.password);
+    await helper.login(config.username, config.password, config.fingerPrint);
     const semesters = await helper.getSemesterIdList();
     all += semesters.length;
     for (let semesterId of semesters) {
