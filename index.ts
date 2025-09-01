@@ -116,8 +116,6 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         taskId = await wait();
     }
 
-    let temp = addCSRFTokenToUrl(url, helper.getCSRFToken());
-    console.log("%o", temp);
     let result = await fetch(addCSRFTokenToUrl(url, helper.getCSRFToken()));
 
     let length = -1;
