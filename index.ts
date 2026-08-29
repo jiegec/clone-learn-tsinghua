@@ -161,7 +161,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
     all += documents.length;
     if (config.ignoreCount !== -1 && documents.length > config.ignoreCount) {
         current += documents.length;
-        progress(`Too many files skipped: ${course.name}`);
+        progress(`Too many files skipped: ${course.chineseName}`);
         return;
     }
 
@@ -214,7 +214,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         tasks.push((async () => {
             await download(document.downloadUrl,
                 fileName,
-                `${course.name}/${document.title}.${document.fileType}`,
+                `${course.chineseName}/${document.title}.${document.fileType}`,
                 document.uploadTime);
         })().catch(err => {
             progress(`got err ${err} when downloading`);
@@ -240,7 +240,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
         all += courses.length;
         for (let course of courses) {
             current++;
-            progress(`Processing course ${course.name} of semester ${semesterId}`);
+            progress(`Processing course ${course.chineseName} of semester ${semesterId}`);
 
             const files = await helper.getFileList(course.id, course.courseType);
             await callback(semester, course, files);
@@ -255,7 +255,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 fs.writeFileSync(file, textVersionJs(notification.content));
                 fs.utimesSync(file, notification.publishTime, notification.publishTime);
                 current++;
-                progress(`${course.name}/${title}.txt Saved`);
+                progress(`${course.chineseName}/${title}.txt Saved`);
                 if (notification.attachment?.downloadUrl && notification.attachment?.name) {
                     let attachmentName = cleanFileName(notification.attachment.name);
                     all++;
@@ -274,7 +274,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                         } else {
                             await download(notification.attachment!.downloadUrl,
                                 fileName,
-                                `${course.name}/${title}-${attachmentName}`,
+                                `${course.chineseName}/${title}-${attachmentName}`,
                                 notification.publishTime);
                         }
                     })());
@@ -306,7 +306,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     fs.utimesSync(file, homework.deadline, homework.deadline);
 
                     current++;
-                    progress(`${course.name}/${title}.txt Saved`);
+                    progress(`${course.chineseName}/${title}.txt Saved`);
 
                     // submission
                     if (homework.submitted && homework.submittedAttachment?.downloadUrl && homework.submittedAttachment?.name) {
@@ -322,7 +322,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                                 const time = homework.submitTime || new Date;
                                 await download(homework.submittedAttachment!.downloadUrl,
                                     fileName,
-                                    `${course.name}/${title}-submitted-${attachmentName}`,
+                                    `${course.chineseName}/${title}-submitted-${attachmentName}`,
                                     time
                                 );
                             })());
@@ -342,7 +342,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                             tasks.push((async () => {
                                 await download(homework.attachment!.downloadUrl,
                                     fileName,
-                                    `${course.name}/${title}-${attachmentName}`,
+                                    `${course.chineseName}/${title}-${attachmentName}`,
                                     homework.deadline);
                             })());
                         }
@@ -361,7 +361,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                             tasks.push((async () => {
                                 await download(homework.gradeAttachment!.downloadUrl,
                                     fileName,
-                                    `${course.name}/${title}-graded-${attachmentName}`,
+                                    `${course.chineseName}/${title}-graded-${attachmentName}`,
                                     homework.gradeTime!);
                             })());
                         }
@@ -382,7 +382,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     fs.utimesSync(file, homework.deadline, homework.deadline);
 
                     current++;
-                    progress(`${course.name}/${title}.txt Saved`);
+                    progress(`${course.chineseName}/${title}.txt Saved`);
                 }
             }
         }
