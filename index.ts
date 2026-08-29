@@ -1,6 +1,6 @@
 import fs from 'fs';
 import _ from 'lodash';
-import { CourseInfo, File, Learn2018Helper, addCSRFTokenToUrl } from 'thu-learn-lib';
+import { CourseInfo, CourseType, File, Learn2018Helper, addCSRFTokenToUrl } from 'thu-learn-lib';
 import textVersionJs from 'textversionjs';
 import { decode as htmlEntitiesDecode } from 'html-entities';
 import { MultiBar, SingleBar } from 'cli-progress';
@@ -43,7 +43,7 @@ function createPath(path: string) {
 
 function getAndEnsureSaveFileDir(semester: { dirname: string }, course: CourseInfo) {
     let dirname = semester.dirname;
-    let name = cleanFileName(`${course.name}(${course.courseIndex})`);
+    let name = cleanFileName(`${course.chineseName}(${course.courseIndex})`);
     let path = `${config.rootDir}/${dirname}/${name}`;
     createPath(`${config.rootDir}`);
     createPath(`${config.rootDir}/${dirname}`);
@@ -224,7 +224,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
 (async () => {
     await helper.login(config.username, config.password, config.fingerPrint);
-    const semesters = await helper.getSemesterIdList();
+    const semesters = await helper.getSemesterIdList(config.courseType as CourseType);
     all += semesters.length;
     for (let semesterId of semesters) {
         current++;
@@ -236,7 +236,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             id: semesterId,
             dirname: config.semesters.get(semesterId)!,
         };
-        const courses = await helper.getCourseList(semester.id);
+        const courses = await helper.getCourseList(semester.id, config.courseType as CourseType);
         all += courses.length;
         for (let course of courses) {
             current++;
@@ -244,7 +244,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
             const files = await helper.getFileList(course.id, course.courseType);
             await callback(semester, course, files);
-            const notifications = await helper.getNotificationList(course.id);
+            const notifications = await helper.getNotificationList(course.id, config.courseType as CourseType);
             let dir = getAndEnsureSaveFileDir(semester, course);
 
             // notification
@@ -281,89 +281,108 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 }
             }
 
-            // homework
-            const homeworks = await helper.getHomeworkList(course.id);
-            all += homeworks.length;
-            for (let homework of homeworks) {
-                let title = cleanFileName(htmlEntitiesDecode(homework.title));
-                let file = `${dir}/${dirHomework}/${title}.txt`;
-                let content = '';
-                if (homework.description !== undefined) {
-                    content += `说明： ${textVersionJs(homework.description).replace(/&videoVersion=[0-9]+/, '')}\n`;
-                }
-                if (homework.grade !== undefined) {
-                    if (homework.gradeLevel !== undefined) {
-                        content += `分数： ${homework.grade}(${homework.gradeLevel}) by ${homework.graderName}\n`;
-                    } else {
-                        content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+            if (config.courseType === "student") {
+                // student
+                const homeworks = await helper.getHomeworkList(course.id, CourseType.STUDENT);
+                all += homeworks.length;
+                for (let homework of homeworks) {
+                    let title = cleanFileName(htmlEntitiesDecode(homework.title));
+                    let file = `${dir}/${dirHomework}/${title}.txt`;
+                    let content = '';
+                    if (homework.description !== undefined) {
+                        content += `说明： ${textVersionJs(homework.description).replace(/&videoVersion=[0-9]+/, '')}\n`;
+                    }
+                    if (homework.grade !== undefined) {
+                        if (homework.gradeLevel !== undefined) {
+                            content += `分数： ${homework.grade}(${homework.gradeLevel}) by ${homework.graderName}\n`;
+                        } else {
+                            content += `分数： ${homework.grade} by ${homework.graderName}\n`;
+                        }
+                    }
+                    if (homework.gradeContent !== undefined) {
+                        content += `评语： ${homework.gradeContent}\n`;
+                    }
+                    fs.writeFileSync(file, content);
+                    fs.utimesSync(file, homework.deadline, homework.deadline);
+
+                    current++;
+                    progress(`${course.name}/${title}.txt Saved`);
+
+                    // submission
+                    if (homework.submitted && homework.submittedAttachment?.downloadUrl && homework.submittedAttachment?.name) {
+                        let attachmentName = cleanFileName(homework.submittedAttachment.name);
+                        all++;
+                        if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
+                            1000 * 60 * 60 * 24 * config.ignoreDay) {
+                            current++;
+                            progress(`Too old skipped: ${title}-submitted-${attachmentName}`);
+                        } else {
+                            let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
+                            tasks.push((async () => {
+                                const time = homework.submitTime || new Date;
+                                await download(homework.submittedAttachment!.downloadUrl,
+                                    fileName,
+                                    `${course.name}/${title}-submitted-${attachmentName}`,
+                                    time
+                                );
+                            })());
+                        }
+                    }
+
+                    // attachment
+                    if (homework.attachment?.downloadUrl && homework.attachment?.name) {
+                        let attachmentName = cleanFileName(homework.attachment.name);
+                        all++;
+                        if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
+                            1000 * 60 * 60 * 24 * config.ignoreDay) {
+                            current++;
+                            progress(`Too old skipped: ${title}-${attachmentName}`);
+                        } else {
+                            let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
+                            tasks.push((async () => {
+                                await download(homework.attachment!.downloadUrl,
+                                    fileName,
+                                    `${course.name}/${title}-${attachmentName}`,
+                                    homework.deadline);
+                            })());
+                        }
+                    }
+
+                    // grade attachment
+                    if (homework.gradeAttachment?.downloadUrl && homework.gradeAttachment?.name) {
+                        let attachmentName = cleanFileName(homework.gradeAttachment.name);
+                        all++;
+                        if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime!).getTime() >
+                            1000 * 60 * 60 * 24 * config.ignoreDay) {
+                            current++;
+                            progress(`Too old skipped: ${title}-graded-${attachmentName}`);
+                        } else {
+                            let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
+                            tasks.push((async () => {
+                                await download(homework.gradeAttachment!.downloadUrl,
+                                    fileName,
+                                    `${course.name}/${title}-graded-${attachmentName}`,
+                                    homework.gradeTime!);
+                            })());
+                        }
                     }
                 }
-                if (homework.gradeContent !== undefined) {
-                    content += `评语： ${homework.gradeContent}\n`;
-                }
-                fs.writeFileSync(file, content);
-                fs.utimesSync(file, homework.deadline, homework.deadline);
-
-                current++;
-                progress(`${course.name}/${title}.txt Saved`);
-
-                // submission
-                if (homework.submitted && homework.submittedAttachment?.downloadUrl && homework.submittedAttachment?.name) {
-                    let attachmentName = cleanFileName(homework.submittedAttachment.name);
-                    all++;
-                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
-                        1000 * 60 * 60 * 24 * config.ignoreDay) {
-                        current++;
-                        progress(`Too old skipped: ${title}-submitted-${attachmentName}`);
-                    } else {
-                        let fileName = `${dir}/${dirHomework}/${title}-submitted-${attachmentName}`;
-                        tasks.push((async () => {
-                            const time = homework.submitTime || new Date;
-                            await download(homework.submittedAttachment!.downloadUrl,
-                                fileName,
-                                `${course.name}/${title}-submitted-${attachmentName}`,
-                                time
-                            );
-                        })());
+            } else {
+                // teacher
+                const homeworks = await helper.getHomeworkList(course.id, CourseType.TEACHER);
+                all += homeworks.length;
+                for (let homework of homeworks) {
+                    let title = cleanFileName(htmlEntitiesDecode(homework.title));
+                    let file = `${dir}/${dirHomework}/${title}.txt`;
+                    let content = '';
+                    if (homework.description !== undefined) {
+                        content += `说明： ${textVersionJs(homework.description).replace(/&videoVersion=[0-9]+/, '')}\n`;
                     }
-                }
+                    fs.writeFileSync(file, content);
+                    fs.utimesSync(file, homework.deadline, homework.deadline);
 
-                // attachment
-                if (homework.attachment?.downloadUrl && homework.attachment?.name) {
-                    let attachmentName = cleanFileName(homework.attachment.name);
-                    all++;
-                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.deadline).getTime() >
-                        1000 * 60 * 60 * 24 * config.ignoreDay) {
-                        current++;
-                        progress(`Too old skipped: ${title}-${attachmentName}`);
-                    } else {
-                        let fileName = `${dir}/${dirHomework}/${title}-${attachmentName}`;
-                        tasks.push((async () => {
-                            await download(homework.attachment!.downloadUrl,
-                                fileName,
-                                `${course.name}/${title}-${attachmentName}`,
-                                homework.deadline);
-                        })());
-                    }
-                }
-
-                // grade attachment
-                if (homework.gradeAttachment?.downloadUrl && homework.gradeAttachment?.name) {
-                    let attachmentName = cleanFileName(homework.gradeAttachment.name);
-                    all++;
-                    if (config.ignoreDay !== -1 && Date.now() - new Date(homework.gradeTime!).getTime() >
-                        1000 * 60 * 60 * 24 * config.ignoreDay) {
-                        current++;
-                        progress(`Too old skipped: ${title}-graded-${attachmentName}`);
-                    } else {
-                        let fileName = `${dir}/${dirHomework}/${title}-graded-${attachmentName}`;
-                        tasks.push((async () => {
-                            await download(homework.gradeAttachment!.downloadUrl,
-                                fileName,
-                                `${course.name}/${title}-graded-${attachmentName}`,
-                                homework.gradeTime!);
-                        })());
-                    }
+                    current++;
+                    progress(`${course.name}/${title}.txt Saved`);
                 }
             }
         }
