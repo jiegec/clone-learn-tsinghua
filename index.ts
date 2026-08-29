@@ -1,7 +1,9 @@
 import fs from 'fs';
 import _ from 'lodash';
-import { CourseInfo, CourseType, File, Learn2018Helper, addCSRFTokenToUrl } from 'thu-learn-lib';
+import { CourseInfo, CourseType, File, Learn2018Helper } from 'thu-learn-lib';
 import textVersionJs from 'textversionjs';
+import TurndownService from 'turndown';
+import { createDocument } from '@mixmark-io/domino';
 import { decode as htmlEntitiesDecode } from 'html-entities';
 import { MultiBar, SingleBar } from 'cli-progress';
 import { config } from './config.js';
@@ -118,7 +120,7 @@ async function download(url: string, fileName: string, msg: string, time: Date) 
         taskId = await wait();
     }
 
-    let result = await fetch(addCSRFTokenToUrl(url, helper.getCSRFToken()));
+    let result = await helper.fetchWithToken(url);
 
     let length = -1;
     let downloadBar = downloadBars[taskId];
@@ -403,6 +405,52 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
                 current++;
                 progress(`${course.chineseName}/${title}.txt Saved`);
+
+                all++;
+                let fileName = `${dir}/${dirDiscussion}/${title}-content.md`;
+                let result = await helper.fetchWithToken(discussion.url);
+                let html = await result.text();
+                let detail = createDocument(html).querySelector('div.detail');
+                let markdown: string;
+                if (detail) {
+                    // drop the view-count element
+                    for (const el of Array.from(detail.querySelectorAll('#liulancishu'))) {
+                        el.parentNode?.removeChild(el);
+                    }
+                    // strip csrf tokens from anchor and image links
+                    const stripCsrf = (el: Element, attr: 'href' | 'src') => {
+                        const value = el.getAttribute(attr);
+                        if (!value) return;
+                        try {
+                            const url = new URL(value, discussion.url);
+                            if (url.searchParams.has('_csrf')) {
+                                url.searchParams.delete('_csrf');
+                                // preserve relative links; only resolve scheme/absolute ones
+                                if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value) || value.startsWith('//')) {
+                                    el.setAttribute(attr, url.toString());
+                                } else {
+                                    el.setAttribute(attr, url.pathname + url.search + url.hash);
+                                }
+                            }
+                        } catch (e) {
+                            // leave malformed links untouched
+                        }
+                    };
+                    for (const link of Array.from(detail.querySelectorAll('a[href]'))) {
+                        stripCsrf(link, 'href');
+                    }
+                    for (const img of Array.from(detail.querySelectorAll('img[src]'))) {
+                        stripCsrf(img, 'src');
+                    }
+                    markdown = new TurndownService().turndown(detail);
+                } else {
+                    markdown = new TurndownService().turndown(html);
+                }
+                fs.writeFileSync(fileName, markdown);
+                fs.utimesSync(fileName, discussion.publishTime, discussion.publishTime);
+
+                current++;
+                progress(`${course.chineseName}/${title}-content.md Saved`);
             }
         }
     }
