@@ -7,9 +7,10 @@ export let config = {
     // 比如 rootDir 为 '/home/xalanq/document'，然后 semesters 有 '2019-2020-1': '大三上'
     // 那么运行程序就会出现 '/home/xalanq/document/大三上' 这个文件夹
     // 然后该文件夹里会有以下三个文件夹
-    // dirHomework、dirNotice、dirFile
-    // 分别表示：作业的文件夹名、通知的文件夹名、文件的文件夹名
+    // dirDiscussion、dirHomework、dirNotice、dirFile
+    // 分别表示：课程讨论的文件夹名、作业的文件夹名、通知的文件夹名、文件的文件夹名
     rootDir: '/path/to/yours',
+    dirDiscussion: 'discussion',
     dirHomework: 'homework',
     dirNotice: 'notice',
     dirFile: 'file',

@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { Readable } from 'stream';
 import { ReadableStream } from 'stream/web';
 
+const dirDiscussion = config.dirDiscussion;
 const dirHomework = config.dirHomework;
 const dirNotice = config.dirNotice;
 const dirFile = config.dirFile;
@@ -48,6 +49,7 @@ function getAndEnsureSaveFileDir(semester: { dirname: string }, course: CourseIn
     createPath(`${config.rootDir}`);
     createPath(`${config.rootDir}/${dirname}`);
     createPath(`${config.rootDir}/${dirname}/${name}`);
+    createPath(`${config.rootDir}/${dirname}/${name}/${dirDiscussion}`);
     createPath(`${config.rootDir}/${dirname}/${name}/${dirHomework}`);
     createPath(`${config.rootDir}/${dirname}/${name}/${dirNotice}`);
     createPath(`${config.rootDir}/${dirname}/${name}/${dirFile}`);
@@ -384,6 +386,23 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                     current++;
                     progress(`${course.chineseName}/${title}.txt Saved`);
                 }
+            }
+
+            const discussions = await helper.getDiscussionList(course.id, config.courseType as CourseType);
+            all += discussions.length;
+            for (let discussion of discussions) {
+                let title = cleanFileName(htmlEntitiesDecode(discussion.title));
+                let file = `${dir}/${dirDiscussion}/${title}.txt`;
+                let content = '';
+                if (discussion.comment !== undefined) {
+                    content += `评论： ${discussion.comment}\n`;
+                }
+                content += `发布者： ${discussion.publisherName}\n`;
+                content += `最后回复者： ${discussion.lastReplierName}\n`;
+                fs.writeFileSync(file, content);
+
+                current++;
+                progress(`${course.chineseName}/${title}.txt Saved`);
             }
         }
     }
