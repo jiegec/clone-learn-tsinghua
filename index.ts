@@ -29,14 +29,6 @@ function bytesToSize(bytes: number) {
     return String(Math.floor(bytes / Math.pow(k, i)).toFixed(0)) + sizes[i];
 }
 
-function isSameSize(document_size: string, stats_size: number) {
-    if (document_size[document_size.length - 1] === 'B') {
-        return (document_size.substring(0, document_size.length - 1) === stats_size.toString());
-    } else {
-        return (document_size === bytesToSize(stats_size));
-    }
-}
-
 function createPath(path: string) {
     try {
         fs.mkdirSync(path);
@@ -185,7 +177,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
         try {
             const stats = fs.statSync(`${fileName}`);
-            if (isSameSize(document.size, stats.size)) {
+            if (document.rawSize === stats.size) {
                 current++;
                 progress(`Already downloaded skipped: ${document.title}`);
                 continue;
