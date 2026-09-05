@@ -382,11 +382,24 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 }
             }
 
+            const discussionBoards = await helper.getDiscussionBoardList(course.id, config.courseType as CourseType);
+
             const discussions = await helper.getDiscussionList(course.id, config.courseType as CourseType);
             all += discussions.length;
             for (let discussion of discussions) {
                 let title = cleanFileName(htmlEntitiesDecode(discussion.title));
-                let file = `${dir}/${dirDiscussion}/${title}.txt`;
+
+                let boardName = 'Unknown';
+                for (let discussionBoard of discussionBoards) {
+                    if (discussionBoard.boardId === discussion.boardId) {
+                        boardName = cleanFileName(discussionBoard.title);
+                        break;
+                    }
+                }
+
+                let file = `${dir}/${dirDiscussion}/${boardName}/${title}.txt`;
+                createPath(`${dir}/${dirDiscussion}/${boardName}`);
+
                 let content = '';
                 if (discussion.comment !== undefined) {
                     content += `评论： ${discussion.comment}\n`;
@@ -399,7 +412,7 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
                 progress(`${course.chineseName}/${title}.txt Saved`);
 
                 all++;
-                let fileName = `${dir}/${dirDiscussion}/${title}-content.md`;
+                let fileName = `${dir}/${dirDiscussion}/${boardName}/${title}-content.md`;
                 let result = await helper.fetchWithToken(discussion.url);
                 let html = await result.text();
                 let detail = createDocument(html).querySelector('div.detail');
