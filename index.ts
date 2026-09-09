@@ -389,12 +389,17 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
             for (let discussion of discussions) {
                 let title = cleanFileName(htmlEntitiesDecode(discussion.title));
 
-                let boardName = 'Unknown';
+                let boardName = undefined;
                 for (let discussionBoard of discussionBoards) {
                     if (discussionBoard.boardId === discussion.boardId) {
                         boardName = cleanFileName(discussionBoard.title);
                         break;
                     }
+                }
+
+                if (boardName === undefined) {
+                    // buggy, skip
+                    continue;
                 }
 
                 let file = `${dir}/${dirDiscussion}/${boardName}/${title}.txt`;
@@ -456,6 +461,17 @@ async function callback(semester: { id: string, dirname: string }, course: Cours
 
                 current++;
                 progress(`${course.chineseName}/${title}-content.md Saved`);
+            }
+
+            if (config.courseType === CourseType.TEACHER) {
+                const students = await helper.getStudentList(course.id);
+                let fileName = `${dir}/students.csv`;
+                let content = "student_id,real_name,gender,class_name,student_type,department,phone_number,email,nationality";
+                for (let student of students) {
+                    content += `\n${student.student_id},${student.real_name},${student.gender},${student.class_name},${student.student_type},${student.department},${student.phone_number},${student.email},${student.nationality}`;
+                }
+                fs.writeFileSync(fileName, content);
+                progress(`${course.chineseName}/students.csv Saved`);
             }
         }
     }
